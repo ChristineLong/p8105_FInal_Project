@@ -1,2 +1,2 @@
-# p8105_FInal_Project
+# p8105_Final_Project
 Gun Violence
