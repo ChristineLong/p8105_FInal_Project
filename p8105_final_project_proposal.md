@@ -1,6 +1,7 @@
 Final Project Proposal
 ================
-Zanis Fang, UID: ZF2213; Yuelin Long, UID: yl3181
+Yuelin Long, UID: yl3181; Marisa Sobel UID: ms5533; Eileen Shea UID:
+eas2297; Zanis Fang, UID: zf2213; Devon Morgan UID: dm3175
 11/8/2018
 
 ## Final Project - Data Science (P8105)
@@ -18,9 +19,9 @@ what might be associated with increased gun violence.
 
   - Website with static visualizations for statistical analyses, along
     with interactive map(s)
-
-  - Website will include links to data sources and interpretations of
-    findings
+    
+      - Website will include links to data sources and interpretations
+        of findings
 
   - Screencast explaining website and analyses
 
@@ -28,20 +29,15 @@ what might be associated with increased gun violence.
 
   - [Gun Violence Archive](http://www.shootingtracker.com)
 
-  - Bureau of Alcohol, Tobacco, Firearms and Explosives (ATF)
+  - [Bureau of
+    Alcohol](https://www.atf.gov/resource-center/data-statistics),
+    [Tobacco, Firearms and Explosives
+    (ATF)](https://www.atf.gov/firearms/listing-federal-firearms-licensees)
 
-  - <https://www.atf.gov/resource-center/data-statistics>
+  - [Bureau of Labor Statistics](https://www.bls.gov/eag/eag.us.htm)
 
-  - <https://www.atf.gov/firearms/listing-federal-firearms-licensees>
-
-  - Bureau of Labor Statistics
-
-  - <https://www.bls.gov/eag/eag.us.htm>
-
-  - CDC: National Center for Health
-    Statistics
-
-  - <https://www.cdc.gov/nchs/pressroom/sosmap/firearm_mortality/firearm.htm>
+  - [CDC: National Center for Health
+    Statistics](https://www.cdc.gov/nchs/pressroom/sosmap/firearm_mortality/firearm.htm)
 
 **Planned Analyses/Visualizations/Coding Challenges:** We hope to look
 at gun violence trends over time, as well as gun violence trends
@@ -51,9 +47,18 @@ firearms, and alcohol/controlled substance abuse. A challenge that is
 not inherently a coding challenge but that is a data completeness
 challenge is the fact that a large proportion of firearms in the United
 States are bought on the black market or exchanged secondhand
-off-the-market. Planned Timeline: November 8: Proposal due November
-12-16: Project Review Meeting w/TA • Prior to the review meeting, each
-team member will familiarize themselves with the datasets and think of
-other potential analyses/visualizations based on findings Post-meeting:
-Scrape data, clean data, conduct primary analyses, buffer time for
-troubleshooting December 6: Final Project due
+off-the-market.
+
+**Planned Timeline:**
+
+  - November 8: Proposal due
+
+  - November 12-16: Project Review Meeting w/TA
+    
+      - Prior to the review meeting, each team member will familiarize
+        themselves with the datasets and think of other potential
+        analyses/visualizations based on findings Post-meeting: Scrape
+        data, clean data, conduct primary analyses, buffer time for
+        troubleshooting
+
+  - December 6: Final Project due
