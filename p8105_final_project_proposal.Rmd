@@ -1,0 +1,57 @@
+---
+title: "Final Project Proposal"
+author: "Zanis Fang, UID: ZF2213; Yuelin Long, UID: yl3181"
+date: "11/8/2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Final Project - Data Science (P8105)
+
+**Tentative Project Title:** *Gun Violence in the United States*
+
+**Group Members:** Yuelin Long (yl3181), Marisa Sobel (ms5533), Eileen Shea
+(eas2297), Zanis Fang (zf2213), Devon Morgan (dm3175)
+
+**Motivation:** Gun violence is of increasing concern for the US population over the last
+few years, and we are interested in looking at what might be associated with increased
+gun violence.
+
+**Intended Final Products:**
+
++ Website with static visualizations for statistical analyses, along with
+interactive map(s)
+
+- Website will include links to data sources and interpretations of
+findings
+
++ Screencast explaining website and analyses
+
+**Anticipated Data Sources:**
+
++ [Gun Violence Archive](http://www.shootingtracker.com)
+
++ Bureau of Alcohol, Tobacco, Firearms and Explosives (ATF)
+
+- https://www.atf.gov/resource-center/data-statistics
+- https://www.atf.gov/firearms/listing-federal-firearms-licensees
+
++ Bureau of Labor Statistics
+
+- https://www.bls.gov/eag/eag.us.htm
+
++ CDC: National Center for Health Statistics
+
+- https://www.cdc.gov/nchs/pressroom/sosmap/firearm_mortality/firearm.htm
+
+**Planned Analyses/Visualizations/Coding Challenges:**
+We hope to look at gun violence trends over time, as well as gun violence trends geographically. Other factors may be taken into consideration for analysis, such as demographic characteristics, accessibility to firearms, and alcohol/controlled substance abuse. A challenge that is not inherently a coding challenge but that is a data completeness challenge is the fact that a large proportion of firearms in the United States are bought on the black market or exchanged secondhand off-the-market.
+
+**Planned Timeline:**
+      November 8: Proposal due
+      November 12-16: Project Review Meeting w/TA
+            Prior to the review meeting, each team member will familiarize themselves with the datasets and think of other potential analyses/visualizations based on findings Post-meeting: Scrape data, clean data, conduct primary analyses, buffer time for troubleshooting
+      December 6: Final Project due
