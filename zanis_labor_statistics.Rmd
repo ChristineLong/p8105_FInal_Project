@@ -42,12 +42,19 @@ str_extract_all(ssamatab1_sample, "([\\S]+[\\s|$[0-9]])+")
 ######
 
 # fixed width dataframe
-read_delim("./dataset/ssamatab1.txt",
+ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
 												delim = "[ ]",
 												col_names = "raw",
 												skip = 5) %>%
 	filter(str_detect(raw, "MT[0-9]+[\\s]")) %>%
-	separate(raw, into = ssamatab1_colname, sep = "[\\s]{2,}")
+	separate(raw, into = ssamatab1_colname, sep = "[\\s]{2,}") %>% 
+	janitor::clean_names()
+
+# take a look at unemployment rate of New York-Newark_Jersey area
+ssamatab1 %>%
+	filter(str_detect(area, "New York")) %>%
+	ggplot(aes(y = rate, x = year)) +
+	  geom_point()
 
 ```
 
