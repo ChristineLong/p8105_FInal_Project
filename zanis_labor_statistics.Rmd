@@ -1,0 +1,53 @@
+---
+title: "Socioeconomic status"
+author: 'Zanis Fang, UID: ZF2213'
+date: "11/14/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+```{r}
+# download the file if not exist
+if (!file.exists("./dataset/ssamatab1.txt")) {
+	download.file("https://www.bls.gov/web/metro/ssamatab1.txt",
+								destfile = "./dataset/ssamatab1.txt")
+}
+	
+# get file name
+ssamatab1_file <- "./dataset/ssamatab1.txt"
+
+# get colname rows
+ssamatab1_colname <- read_lines(ssamatab1_file, skip = 3, n_max = 1)
+# parse column name, words linked by single space, if not, words without space
+ssamatab1_colname <-
+	str_extract_all(ssamatab1_colname, "([\\S]+[\\s][\\S]+)|[\\S]+") %>%
+	unlist()
+
+####### not important here
+# play with metacharacters
+ssamatab1_sample <- read_lines(ssamatab1_file, skip = 5, n_max = 3)
+# start with M or one space, followed by non-space, followed by one space, non-overlapping
+str_extract_all(ssamatab1_sample, "[M|\\s]\\S+[\\s]")
+# start with non-space, end with one space, non-overlapping
+str_extract_all(ssamatab1_sample, "[\\S]+\\s")
+# one word character (number or letter), one non-word character(others)
+str_extract_all(ssamatab1_sample, "\\w\\W")
+# start with any number of non-space, end with a single space or the end of line, such pattern goes over and over until meet two consecutive spaces 
+str_extract_all(ssamatab1_sample, "([\\S]+[\\s|$[0-9]])+")
+######
+
+# fixed width dataframe
+read_delim("./dataset/ssamatab1.txt",
+												delim = "[ ]",
+												col_names = "raw",
+												skip = 5) %>%
+	filter(str_detect(raw, "MT[0-9]+[\\s]")) %>%
+	separate(raw, into = ssamatab1_colname, sep = "[\\s]{2,}")
+
+```
+
