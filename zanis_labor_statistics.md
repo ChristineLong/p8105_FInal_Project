@@ -20,116 +20,28 @@ ssamatab1_colname <-
     str_extract_all(ssamatab1_colname, "([\\S]+[\\s][\\S]+)|[\\S]+") %>%
     unlist()
 
-####### not important here
-# play with metacharacters
-ssamatab1_sample <- read_lines(ssamatab1_file, skip = 5, n_max = 3)
-# start with M or one space, followed by non-space, followed by one space, non-overlapping
-str_extract_all(ssamatab1_sample, "[M|\\s]\\S+[\\s]")
-```
-
-    ## [[1]]
-    ##  [1] "MT0111500000000 "                " 01 "                           
-    ##  [3] " 11500 "                         " Anniston-Oxford-Jacksonville, "
-    ##  [5] " MSA "                           " 1990 "                         
-    ##  [7] " 01 "                            " 51,485 "                       
-    ##  [9] " 48,307 "                        " 3,178 "                        
-    ## 
-    ## [[2]]
-    ##  [1] "MT0112220000000 "  " 01 "              " 12220 "          
-    ##  [4] " Auburn-Opelika, " " MSA "             " 1990 "           
-    ##  [7] " 01 "              " 44,415 "          " 41,247 "         
-    ## [10] " 3,168 "          
-    ## 
-    ## [[3]]
-    ##  [1] "MT0113820000000 "     " 01 "                 " 13820 "             
-    ##  [4] " Birmingham-Hoover, " " MSA "                " 1990 "              
-    ##  [7] " 01 "                 " 457,612 "            " 433,590 "           
-    ## [10] " 24,022 "
-
-``` r
-# start with non-space, end with one space, non-overlapping
-str_extract_all(ssamatab1_sample, "[\\S]+\\s")
-```
-
-    ## [[1]]
-    ##  [1] "MT0111500000000 "               "01 "                           
-    ##  [3] "11500 "                         "Anniston-Oxford-Jacksonville, "
-    ##  [5] "AL "                            "MSA "                          
-    ##  [7] "1990 "                          "01 "                           
-    ##  [9] "51,485 "                        "48,307 "                       
-    ## [11] "3,178 "                        
-    ## 
-    ## [[2]]
-    ##  [1] "MT0112220000000 " "01 "              "12220 "          
-    ##  [4] "Auburn-Opelika, " "AL "              "MSA "            
-    ##  [7] "1990 "            "01 "              "44,415 "         
-    ## [10] "41,247 "          "3,168 "          
-    ## 
-    ## [[3]]
-    ##  [1] "MT0113820000000 "    "01 "                 "13820 "             
-    ##  [4] "Birmingham-Hoover, " "AL "                 "MSA "               
-    ##  [7] "1990 "               "01 "                 "457,612 "           
-    ## [10] "433,590 "            "24,022 "
-
-``` r
-# one word character (number or letter), one non-word character(others)
-str_extract_all(ssamatab1_sample, "\\w\\W")
-```
-
-    ## [[1]]
-    ##  [1] "0 " "1 " "0 " "n-" "d-" "e," "L " "A " "0 " "1 " "1," "5 " "8," "7 "
-    ## [15] "3," "8 " "6."
-    ## 
-    ## [[2]]
-    ##  [1] "0 " "1 " "0 " "n-" "a," "L " "A " "0 " "1 " "4," "5 " "1," "7 " "3,"
-    ## [15] "8 " "7."
-    ## 
-    ## [[3]]
-    ##  [1] "0 " "1 " "0 " "m-" "r," "L " "A " "0 " "1 " "7," "2 " "3," "0 " "4,"
-    ## [15] "2 " "5."
-
-``` r
-# start with any number of non-space, end with a single space or the end of line, such pattern goes over and over until meet two consecutive spaces 
-str_extract_all(ssamatab1_sample, "([\\S]+[\\s|$[0-9]])+")
-```
-
-    ## [[1]]
-    ##  [1] "MT0111500000000 "                     
-    ##  [2] "01 "                                  
-    ##  [3] "11500 "                               
-    ##  [4] "Anniston-Oxford-Jacksonville, AL MSA "
-    ##  [5] "1990 "                                
-    ##  [6] "01 "                                  
-    ##  [7] "51,485 "                              
-    ##  [8] "48,307 "                              
-    ##  [9] "3,178 "                               
-    ## [10] "6.2"                                  
-    ## 
-    ## [[2]]
-    ##  [1] "MT0112220000000 "        "01 "                    
-    ##  [3] "12220 "                  "Auburn-Opelika, AL MSA "
-    ##  [5] "1990 "                   "01 "                    
-    ##  [7] "44,415 "                 "41,247 "                
-    ##  [9] "3,168 "                  "7.1"                    
-    ## 
-    ## [[3]]
-    ##  [1] "MT0113820000000 "           "01 "                       
-    ##  [3] "13820 "                     "Birmingham-Hoover, AL MSA "
-    ##  [5] "1990 "                      "01 "                       
-    ##  [7] "457,612 "                   "433,590 "                  
-    ##  [9] "24,022 "                    "5.2"
-
-``` r
-######
 
 # fixed width dataframe
 ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
                                                 delim = "[ ]",
                                                 col_names = "raw",
                                                 skip = 5) %>%
+    # filtered out footnote
     filter(str_detect(raw, "MT[0-9]+[\\s]")) %>%
+    # separate into columns
     separate(raw, into = ssamatab1_colname, sep = "[\\s]{2,}") %>% 
-    janitor::clean_names()
+    # clean column names
+    janitor::clean_names() %>%
+    rename(fips = code_2) %>% 
+    separate(area, into = c("county", "state_source"), sep = ",") %>%
+    separate(county,
+                     into = paste("county", 1:4, sep = "_"),
+                     sep = "-+") %>%
+    separate(state_source,
+                     into = c("unknown", "state", "source1", "source2"),
+                     sep = " ") %>% 
+    select(-c("unknown", "source1", "source2")) %>% 
+    mutate(rate = as.numeric(rate), fips = as.numeric(fips))
 ```
 
     ## Parsed with column specification:
@@ -137,12 +49,47 @@ ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
     ##   raw = col_character()
     ## )
 
+    ## Warning: Expected 4 pieces. Missing pieces filled with `NA` in 135240
+    ## rows [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    ## 20, ...].
+
+    ## Warning: Expected 4 pieces. Missing pieces filled with `NA` in 129030
+    ## rows [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+    ## 20, ...].
+
 ``` r
-# take a look at unemployment rate of New York-Newark_Jersey area
-ssamatab1 %>%
-    filter(str_detect(area, "New York")) %>%
-    ggplot(aes(y = rate, x = year)) +
-      geom_point()
+usmap::plot_usmap(data = data.frame(
+    ssamatab1 %>%
+        filter(year == "2016", month == "01") %>% 
+        select(state, rate)),
+    values = "rate") +
+    scale_fill_continuous(low = "white", high = "red")
 ```
 
 ![](zanis_labor_statistics_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+
+``` r
+usmap_data <- as_tibble(usmap::us_map(regions = "county"))
+
+
+
+# take a look at unemployment rate of New York-Newark_Jersey area
+ssamatab1 %>%
+    filter(state == "NY") %>%
+    group_by(fips, year) %>%
+    summarize(mean_rate = mean(rate)) %>%
+  ggplot(aes(y = mean_rate, x = year, group = fips, color = fips)) +
+      geom_point(show.legend = FALSE) +
+      geom_line(show.legend = FALSE) +
+      labs(
+        title = "Mean unemployment rate for each area",
+        x = "Year",
+        y = "Mean Unemployment rate",
+        color = "Area"
+      ) +
+      theme(
+        axis.text.x = element_text(angle = 60)
+      )
+```
+
+![](zanis_labor_statistics_files/figure-gfm/unnamed-chunk-1-2.png)<!-- -->

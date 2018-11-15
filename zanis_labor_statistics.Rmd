@@ -8,6 +8,8 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(usmap)
+
 ```
 
 
@@ -28,33 +30,57 @@ ssamatab1_colname <-
 	str_extract_all(ssamatab1_colname, "([\\S]+[\\s][\\S]+)|[\\S]+") %>%
 	unlist()
 
-####### not important here
-# play with metacharacters
-ssamatab1_sample <- read_lines(ssamatab1_file, skip = 5, n_max = 3)
-# start with M or one space, followed by non-space, followed by one space, non-overlapping
-str_extract_all(ssamatab1_sample, "[M|\\s]\\S+[\\s]")
-# start with non-space, end with one space, non-overlapping
-str_extract_all(ssamatab1_sample, "[\\S]+\\s")
-# one word character (number or letter), one non-word character(others)
-str_extract_all(ssamatab1_sample, "\\w\\W")
-# start with any number of non-space, end with a single space or the end of line, such pattern goes over and over until meet two consecutive spaces 
-str_extract_all(ssamatab1_sample, "([\\S]+[\\s|$[0-9]])+")
-######
 
 # fixed width dataframe
 ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
 												delim = "[ ]",
 												col_names = "raw",
 												skip = 5) %>%
+	# filtered out footnote
 	filter(str_detect(raw, "MT[0-9]+[\\s]")) %>%
+	# separate into columns
 	separate(raw, into = ssamatab1_colname, sep = "[\\s]{2,}") %>% 
-	janitor::clean_names()
+	# clean column names
+	janitor::clean_names() %>%
+	rename(fips = code_2) %>% 
+	separate(area, into = c("county", "state_source"), sep = ",") %>%
+	separate(county,
+					 into = paste("county", 1:4, sep = "_"),
+					 sep = "-+") %>%
+	separate(state_source,
+					 into = c("unknown", "state", "source1", "source2"),
+					 sep = " ") %>% 
+	select(-c("unknown", "source1", "source2")) %>% 
+	mutate(rate = as.numeric(rate), fips = as.numeric(fips))
+
+usmap::plot_usmap(data = data.frame(
+	ssamatab1 %>%
+		filter(year == "2016", month == "01") %>% 
+		select(state, rate)),
+	values = "rate") +
+	scale_fill_continuous(low = "white", high = "red")
+
+usmap_data <- as_tibble(usmap::us_map(regions = "county"))
+
+
 
 # take a look at unemployment rate of New York-Newark_Jersey area
 ssamatab1 %>%
-	filter(str_detect(area, "New York")) %>%
-	ggplot(aes(y = rate, x = year)) +
-	  geom_point()
+	filter(state == "NY") %>%
+	group_by(fips, year) %>%
+	summarize(mean_rate = mean(rate)) %>%
+  ggplot(aes(y = mean_rate, x = year, group = fips, color = fips)) +
+	  geom_point(show.legend = FALSE) +
+	  geom_line(show.legend = FALSE) +
+	  labs(
+	    title = "Mean unemployment rate for each area",
+	    x = "Year",
+	    y = "Mean Unemployment rate",
+	    color = "Area"
+	  ) +
+	  theme(
+	  	axis.text.x = element_text(angle = 60)
+	  )
 
 ```
 
