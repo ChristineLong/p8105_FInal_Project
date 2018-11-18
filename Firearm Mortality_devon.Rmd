@@ -7,11 +7,90 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(usmap)
+library(readxl)
+library(patchwork)
 ```
 
 ## Import data
 
+Imported firearm mortality dataset from 
+
 ```{r}
-mortality_df = read.table()
+firearm_mortality = read_csv("./data/cdc_firearm_mortality_data.csv", na = "Unreliable") %>% 
+	janitor::clean_names() %>% 
+	select(-ten_year_age_groups_code, -injury_mechanism_all_other_leading_causes_code, -race_code, death_cause= injury_mechanism_all_other_leading_causes)
+
+firearm_mortality_summary = read_excel("./data/cdc_firearm_all_ages.xlsx") %>% 
+	janitor::clean_names() %>% 
+	select(-year_code, -injury_mechanism_all_other_leading_causes_code, death_cause= injury_mechanism_all_other_leading_causes)
+
 ```
+
+
+Added state abbreviations to dataset: 
+
+```{r}
+st_crosswalk = tibble(state = state.name) %>%
+   bind_cols(tibble(abb = state.abb)) %>% 
+	 bind_rows(tibble(state = "District of Columbia", abb = "DC"))
+
+
+
+```
+
+## Map of Crude Death Rates in 1999, 2007, 2012, 2016
+
+```{r}
+all_states_map_e = left_join(firearm_mortality_summary, st_crosswalk, by = "state") %>%
+		filter(year == 2016) %>% 
+		select(abb, crude_rate) %>% 
+		rename(state = abb) %>% 
+		plot_usmap(data = ., values = "crude_rate", lines = "red") + 
+		scale_fill_continuous(
+    low = "white", high = "red", name = "Crude Death Rate (2016)", label = scales::comma) +    
+		theme(legend.position = "right")
+
+all_states_map_d = left_join(firearm_mortality_summary, st_crosswalk, by = "state") %>%
+		filter(year == 2012) %>% 
+		select(abb, crude_rate) %>% 
+		rename(state = abb) %>% 
+		plot_usmap(data = ., values = "crude_rate", lines = "red") + 
+		scale_fill_continuous(
+    low = "white", high = "red", name = "Crude Death Rate (2012)", label = scales::comma) +    
+		theme(legend.position = "right")
+
+all_states_map_c = left_join(firearm_mortality_summary, st_crosswalk, by = "state") %>%
+		filter(year == 2007) %>% 
+		select(abb, crude_rate) %>% 
+		rename(state = abb) %>% 
+		plot_usmap(data = ., values = "crude_rate", lines = "red") + 
+		scale_fill_continuous(
+    low = "white", high = "red", name = "Crude Death Rate (2007)", label = scales::comma) +    
+		theme(legend.position = "right")
+
+all_states_map_b = left_join(firearm_mortality_summary, st_crosswalk, by = "state") %>%
+		filter(year == 2003) %>% 
+		select(abb, crude_rate) %>% 
+		rename(state = abb) %>% 
+		plot_usmap(data = ., values = "crude_rate", lines = "red") + 
+		scale_fill_continuous(
+    low = "white", high = "red", name = "Crude Death Rate (2003)", label = scales::comma) +    
+		theme(legend.position = "right")
+
+all_states_map_a = left_join(firearm_mortality_summary, st_crosswalk, by = "state") %>%
+		filter(year == 1999) %>% 
+		select(abb, crude_rate) %>% 
+		rename(state = abb) %>% 
+		plot_usmap(data = ., values = "crude_rate", lines = "red") + 
+		scale_fill_continuous(
+    low = "white", high = "red", name = "Crude Death Rate (1999)", label = scales::comma) +    
+		theme(legend.position = "right")
+
+all_states_map_a / all_states_map_b / all_states_map_c / all_states_map_d / all_states_map_e
+```
+
+
+
 
