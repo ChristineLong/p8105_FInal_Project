@@ -9,12 +9,16 @@ output: github_document
 library(tidyverse)
 library(rvest)
 library(httr)
+library(usmap)
+library(viridis)
+library(plotly)
 
 knitr::opts_chunk$set(echo = TRUE)
 
 theme_set(theme_bw() + theme(legend.position = "bottom"))
 ```
 
+## Dataset import and tidy
 
 ```{r}
 # website URL
@@ -36,12 +40,73 @@ gun_climate_data =
 		death_rate = gun_death_rate_per_100k) %>% 
 	mutate(
     grade_2017 = factor(grade_2017, 
-                      levels = c("A", "A-", "B+", "B", "C+", "C", "C-", "D", "F")), 
+                      levels = c("A", "A-", "B+", "B", "C+", "C", "C-", "D", "D-", "F")), 
     grade_2017 = fct_collapse(grade_2017, 
     													A = c("A", "A-"), 
     													B = c("B+", "B"), 
-    													C = c("C+", "C", "C-")))
+    													C = c("C+", "C", "C-"), 
+    													D = c("D", "D-")), 
+    state_abb = state.abb)
 
 gun_climate_data
+```
+
+## Maps 
+
+```{r}
+# gun law strength rank - color 1
+gun_climate_data %>% 
+	select(state_abb, law_strength) %>% 
+	rename(state = state_abb) %>% 
+	plot_usmap(data = ., values = "law_strength") +
+	scale_fill_continuous(low = "white", high = "black", name = "Gun Law Strength Rank (2017)") +
+	theme(legend.position = "top")
+
+# gun law strength rank - color 2
+gun_climate_data %>% 
+	select(state_abb, law_strength) %>% 
+	rename(state = state_abb) %>% 
+	plot_usmap(data = ., values = "law_strength") +
+	scale_fill_viridis(direction = -1) +
+	theme(legend.position = "top")
+	
+# gun law grade - color 1
+gun_climate_data %>% 
+	select(state_abb, grade_2017) %>% 
+	rename(state = state_abb) %>% 
+	plot_usmap(data = ., values = "grade_2017") +
+	scale_fill_manual(values = c("#65ff3f", "#d5ff3f", "#fffb3f", "#ffab3f", "#ff423f"), 
+										name = "Gun Law Strength Rank") + 
+	theme(legend.position = "top")
+
+# gun law grade - color 2
+gun_climate_data %>% 
+	select(state_abb, grade_2017) %>% 
+	rename(state = state_abb) %>% 
+	plot_usmap(data = ., values = "grade_2017") +
+	scale_fill_manual(values = c("#3ca348", "#fff428", "#ff9c1e", "#db1d1a", "#4f0b2f"), 
+										name = "Gun Law Strength Rank") + 
+	theme(legend.position = "top")
+```
+
+## Plots 
+
+```{r}
+# annual state gun death rates per 100,000 people
+# in order of gun strength 
+# grouped by grade
+plot = 
+	gun_climate_data %>% 
+	group_by(grade_2017) %>% 
+	ggplot(aes(x = reorder(state_abb, law_strength), y = death_rate, color = grade_2017)) +
+	geom_bar(stat = "identity", position = position_dodge(width=0.5)) + 
+	coord_flip() +
+	labs(
+		y = "Annual state gun death rate per 100,000 people", 
+		x = "State", 
+		title = "Annual state gun death rate per 100,000 people")
+
+plot
+ggplotly(plot)
 ```
 
