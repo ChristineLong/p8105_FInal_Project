@@ -1,0 +1,47 @@
+---
+title: "Gun Climate Analysis"
+author: "Marisa Sobel"
+date: "11/18/2018"
+output: github_document
+---
+
+```{r, include = FALSE}
+library(tidyverse)
+library(rvest)
+library(httr)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
+```
+
+
+```{r}
+# website URL
+url = "https://lawcenter.giffords.org/scorecard/#rankings"
+gun_climate_url = read_html(url)
+
+# extract table and clean data
+gun_climate_data = 
+	gun_climate_url %>% 
+  html_nodes(css = "table") %>% 
+  .[[1]] %>% 
+  html_table(header = TRUE) %>% 
+  as.tibble() %>% 
+	janitor::clean_names() %>% 
+	rename(
+		law_strength = gun_law_strength_ranked, 
+		grade_2017 = x2017grade, 
+		death_rate_rank = gun_death_rate_ranked, 
+		death_rate = gun_death_rate_per_100k) %>% 
+	mutate(
+    grade_2017 = factor(grade_2017, 
+                      levels = c("A", "A-", "B+", "B", "C+", "C", "C-", "D", "F")), 
+    grade_2017 = fct_collapse(grade_2017, 
+    													A = c("A", "A-"), 
+    													B = c("B+", "B"), 
+    													C = c("C+", "C", "C-")))
+
+gun_climate_data
+```
+
