@@ -80,13 +80,15 @@ gun_climate_data %>%
 	theme(legend.position = "top")
 
 # gun law grade - color 2
-gun_climate_data %>% 
+grade_map = 
+	gun_climate_data %>% 
 	select(state_abb, grade_2017) %>% 
 	rename(state = state_abb) %>% 
 	plot_usmap(data = ., values = "grade_2017") +
 	scale_fill_manual(values = c("#3ca348", "#fff428", "#ff9c1e", "#db1d1a", "#4f0b2f"), 
 										name = "Gun Law Strength Rank") + 
 	theme(legend.position = "top")
+ggplotly(grade_map)
 ```
 
 ## Plots 
