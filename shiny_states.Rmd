@@ -1,0 +1,98 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(plotly)
+library(tidyverse)
+
+# fixed width dataframe
+ssamatab1 <- read_csv("./tidy_ssamatab1.csv")
+
+
+```
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+
+```{r}
+# copy paste ssamatab1 from zanis_labor_statistics.Rmd
+# keep updated to avoid version control
+
+sliderInput("year",
+						label = h3("Select Year"),
+						min = 2000, max = 2015,
+						value = c(2008, 2013))
+
+type_variable <- ssamatab1 %>% distinct(type_variable) %>% pull()
+
+radioButtons("type_variable", label = h3("Choose variable type"),
+    choices = type_variable, 
+    selected = "unemployment")
+
+
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r}
+
+
+
+renderPlotly({
+	geo1 <- list(
+	scope = "usa",
+	projection = list(type = "state"),
+	showlakes = TRUE,
+	lakecolor = toRGB("white")
+	)
+	
+	ssamatab1 %>% 
+	filter(type_variable == input$type_variable,
+				 year %in% input$year[1]:input$year[2]) %>% 
+	plot_geo(locationmode = "USA-states") %>% 
+	add_trace(
+		z = ~value,
+		locations = ~state,
+		color = ~value,
+		colors = "Reds") %>%
+	layout(
+		geo = geo1
+	)
+})
+
+# rsconnect::deployApp("./shiny_states.Rmd")
+
+```
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
+```{r}
+
+```
+

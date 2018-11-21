@@ -9,6 +9,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(usmap)
+library(rsconnect)
 
 ```
 
@@ -51,7 +52,18 @@ ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
 					 into = c("unknown", "state", "source1", "source2"),
 					 sep = " ") %>% 
 	select(-c("unknown", "source1", "source2")) %>% 
-	mutate(rate = as.numeric(rate), fips = as.numeric(fips))
+	mutate(rate = as.numeric(rate),
+				 fips = as.numeric(fips),
+				 year = as.numeric(year)) %>% 
+	mutate(employment = as.numeric(str_remove(employment, ","))) %>% 
+	mutate(unemployment = as.numeric(str_remove(unemployment, ","))) %>%
+	group_by(state, year) %>% 
+	summarize(state_unemployment = sum(unemployment) / sum(unemployment * 100 / rate),
+						unemployment = sum(unemployment)) %>% 
+	filter(str_length(state) == 2) %>% 
+	gather(key = "type_variable", value = "value", state_unemployment:unemployment)
+
+write_csv(ssamatab1, path = "./tidy_ssamatab1.csv")
 
 usmap::plot_usmap(data = data.frame(
 	ssamatab1 %>%
@@ -60,7 +72,7 @@ usmap::plot_usmap(data = data.frame(
 	values = "rate") +
 	scale_fill_continuous(low = "white", high = "red")
 
-usmap_data <- as_tibble(usmap::us_map(regions = "county"))
+
 
 
 
@@ -83,4 +95,48 @@ ssamatab1 %>%
 	  )
 
 ```
+
+### Try plotly
+
+```{r}
+library(plotly)
+	
+geo1 <- list(
+	scope = "usa",
+	projection = list(type = "state"),
+	showlakes = TRUE,
+	lakecolor = toRGB("white")
+)
+
+g2 <- list(
+	scope = "usa",
+	projection = list(type = "state"),
+	showlakes = TRUE,
+	lakecolor = toRGB("white")
+)
+
+plot_geo(ssamatab1, locationmode = "USA-states") %>% 
+	add_trace(
+		z = ~state_unemployment,
+		locations = ~state,
+		color = ~state_unemployment,
+		colors = "Reds") %>%
+	add_markers(
+		y = 12,
+		x = 12,
+		locations = ~state,
+		size = ~unemployment,
+		colors = "Blues",
+		geo = "geo2"
+	) %>%
+	layout(
+		geo = geo1, geo2 = g2
+	)
+
+df <- read.csv("https://raw.githubusercontent.com/plotly/datasets/master/2011_us_ag_exports.csv")
+
+df <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_ebola.csv')
+
+```
+
 
