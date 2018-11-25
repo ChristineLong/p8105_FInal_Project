@@ -1,0 +1,29 @@
+---
+title: "Gun Violence Data"
+author: 'Zanis Fang, UID: ZF2213'
+date: "11/25/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+gun_violence <- read_csv(list.files("./dataset", full.names = TRUE)[2])
+
+state_abb <- state.abb
+names(state_abb) <- state.name
+
+gun_violence_tidy <- gun_violence %>% 
+	select(date, state, latitude, longitude, n_killed, n_injured) %>% 
+	mutate(year = lubridate::year(date)) %>% 
+	mutate(state = state_abb[state]) %>% 
+	select(-date)
+
+write_csv(x = gun_violence_tidy, path = "./shiny_dataset/gun_violence_tidy.csv")
+
+
+
+```
+

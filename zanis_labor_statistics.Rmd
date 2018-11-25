@@ -57,13 +57,13 @@ ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
 				 year = as.numeric(year)) %>% 
 	mutate(employment = as.numeric(str_remove(employment, ","))) %>% 
 	mutate(unemployment = as.numeric(str_remove(unemployment, ","))) %>%
-	group_by(state, year) %>% 
-	summarize(state_unemployment = sum(unemployment) / sum(unemployment * 100 / rate),
-						unemployment = sum(unemployment)) %>% 
+	group_by(state, year) %>%
+	summarize(unemployment_rate = sum(unemployment) / sum(unemployment * 100 / rate),
+						total_unemployment = sum(unemployment)) %>% 
 	filter(str_length(state) == 2) %>% 
-	gather(key = "type_variable", value = "value", state_unemployment:unemployment)
+	gather(key = "type_variable", value = "value", unemployment_rate:total_unemployment)
 
-write_csv(ssamatab1, path = "./tidy_ssamatab1.csv")
+# write_csv(path = "./shiny_dataset/tidy_ssamatab1.csv", x = ssamatab1)
 
 usmap::plot_usmap(data = data.frame(
 	ssamatab1 %>%

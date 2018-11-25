@@ -14,8 +14,9 @@ library(plotly)
 library(tidyverse)
 
 # fixed width dataframe
-ssamatab1 <- read_csv("./tidy_ssamatab1.csv")
-
+ssamatab1 <- read_csv("./shiny_dataset/tidy_ssamatab1.csv")
+merged_firearm_mortality <- read_csv("./shiny_dataset/merged_firearm_mortality.csv")
+gun_violence_tidy <- read_csv("./shiny_dataset/gun_violence_tidy.csv")
 
 ```
 
@@ -42,7 +43,7 @@ radioButtons("type_variable", label = h3("Choose variable type"),
 
 ```
 
-Row
+Row {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
 ### Chart A
@@ -76,23 +77,3 @@ renderPlotly({
 # rsconnect::deployApp("./shiny_states.Rmd")
 
 ```
-
-Row {.tabset .tabset-fade}
------------------------------------------------------------------------
-
-### Chart B
-
-```{r}
-
-```
-
-### Chart C
-
-```{r}
-
-```
-
-```{r}
-
-```
-
