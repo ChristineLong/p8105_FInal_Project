@@ -59,12 +59,33 @@ ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
 	mutate(unemployment = as.numeric(str_remove(unemployment, ","))) %>%
 	group_by(state, year) %>%
 	summarize(unemployment_rate = sum(unemployment) / sum(unemployment * 100 / rate),
-						total_unemployment = sum(unemployment)) %>% 
-	filter(str_length(state) == 2) %>% 
+						total_unemployment = sum(unemployment)) %>%
+	filter(str_length(state) != 2) %>% View
 	gather(key = "type_variable", value = "value", unemployment_rate:total_unemployment)
 
 # write_csv(path = "./shiny_dataset/tidy_ssamatab1.csv", x = ssamatab1)
 
+
+unempl_files <-
+	tibble(state = list.files("./data/unemployment", full.names = TRUE)) %>%
+	mutate(data = map(.x = state, .f = ~read_csv(.x))) %>%
+	mutate(state = str_extract(state, "[A-Z]{4}"))
+
+unempl <- unempl_files$data[[1]]
+for (i in 2:nrow(unempl_files)) {
+	unempl <- full_join(unempl, unempl_files$data[[i]], by = "DATE")
+}
+unempl <- unempl %>% 
+	gather(key = state, value = unemployment_rate, AKUR:WYUR) %>% 
+	mutate(state = str_extract(state, "^[A-Z]{2}")) %>%
+	mutate(year = lubridate::year(DATE)) %>% 
+	group_by(state, year) %>% 
+	summarize(unemployment_rate = mean(unemployment_rate))
+	
+# write_csv(x = unempl, path = "./shiny_dataset/unempl.csv")
+
+
+	
 usmap::plot_usmap(data = data.frame(
 	ssamatab1 %>%
 		filter(year == "2016", month == "01") %>% 
@@ -95,6 +116,9 @@ ssamatab1 %>%
 	  )
 
 ```
+
+
+
 
 ### Try plotly
 

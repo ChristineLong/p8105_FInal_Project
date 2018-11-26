@@ -18,10 +18,12 @@ names(state_abb) <- state.name
 gun_violence_tidy <- gun_violence %>% 
 	select(date, state, latitude, longitude, n_killed, n_injured) %>% 
 	mutate(year = lubridate::year(date)) %>% 
-	mutate(state = state_abb[state]) %>% 
+	mutate(state = state_abb[state],
+				 state = ifelse(is.na(state), "DC", state)) %>% 
 	select(-date)
+	
 
-write_csv(x = gun_violence_tidy, path = "./shiny_dataset/gun_violence_tidy.csv")
+# write_csv(x = gun_violence_tidy, path = "./shiny_dataset/gun_violence_tidy.csv")
 
 
 
