@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Gun Violence and Covariates"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
@@ -34,8 +34,10 @@ unempl <- read_csv("./shiny_dataset/unempl.csv") %>%
 
 merged_data <- full_join(x = gun_violence_merged, y = unempl, by = "state_year")
 merged_data <- full_join(x = merged_data, y = merged_firearm_mortality, by = "state_year")
-merged_data <- merged_data %>% 
-	separate(col = state_year, into = c("state", "year"), sep = "_") %>% 
+merged_data_wide <- merged_data %>% 
+	separate(col = state_year, into = c("state", "year"), sep = "_")
+
+merged_data <- merged_data_wide %>% 
 	gather(key = type_variable, value = value, total_killed:law_strength) %>% 
 	mutate(year = as.numeric(year)) %>% 
 	arrange(year)
@@ -54,18 +56,13 @@ Column {.sidebar}
 
 year <- merged_data %>% distinct(year) %>% pull
 
-# Copy the chunk below to make a group of checkboxes
 selectInput("year", label = h3("Choose year"), choices = as.list(year), selected = 2015)
-
-# radioButtons("year", label = h3("Choose year"),
-#     choices = year, 
-#     selected = "2015")
 
 type_variable <- merged_data %>% distinct(type_variable) %>% pull()
 
 radioButtons("variable_type", label = h3("Choose variable type"),
     choices = type_variable, 
-    selected = "total_killed")
+    selected = "law_strength")
 
 
 
@@ -118,9 +115,27 @@ renderPlotly({
 ### Regression
 
 ```{r}
+
 lm_data <- merged_data %>% 
 	spread(key = type_variable, value = value)
-paste()
+
+crude_rate_lm <- lm(data = lm_data %>% filter(year == 2015),
+										formula = crude_rate ~ law_strength +
+											population + unemployment_rate)
+
+renderPlotly({
+	
+	merged_data_wide <- merged_data_wide %>% filter(year == input$year)
+						
+	p_data <- ggplot(merged_data_wide,
+									 aes_string(x = input$variable_type, y = "crude_rate")) +
+		geom_point() +
+		geom_smooth(method = "lm")
+	
+	ggplotly(p_data)
+
+})
+
 
 ```
 
