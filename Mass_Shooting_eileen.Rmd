@@ -1,0 +1,98 @@
+---
+title: "Final Project - Mass Shooting Section"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  fig.width = 8
+)
+
+library(tidyverse)
+library(usmap)
+library(rvest)
+library(plotly)
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
+```
+
+Load data.
+
+```{r}
+gun_violence_data = read_csv("./data/gun_violence_data_2013_2018.csv")
+```
+
+Tidy data.
+
+```{r}
+gun_v_tidy = 
+	gun_violence_data %>% 
+	select(date:city_or_county, n_killed, n_injured, latitude, longitude) %>% 
+	separate(date, into = c("year", "month", "day"), sep = "-")
+```
+
+## Maps
+
+Centered latitude and longitude points for each state.
+
+```{r}
+url = "https://inkplant.com/code/state-latitudes-longitudes"
+
+coord_webpage = read_html(url)
+```
+
+```{r}
+cent_lat_and_long = 
+	coord_webpage %>%
+  html_nodes(css = "table") %>% 
+	 .[[1]] %>% 
+  html_table(header = TRUE) %>% 
+  as_tibble() %>% 
+	janitor::clean_names() %>% 
+	filter(state != "Alaska", state != "Hawaii")
+```
+
+Bubble map of gun violence by state.
+
+```{r}
+n_shooting_inc = 
+	gun_v_tidy %>% 
+	group_by(state) %>% 
+	summarize(n_incidents = n())
+
+usa_shooting_inc =
+	inner_join(n_shooting_inc, cent_lat_and_long, by = "state")
+
+usa = map_data("state")
+
+ggplot() +
+	geom_path(data = usa, aes(x = long, y = lat, group = group)) +
+	geom_point(data = usa_shooting_inc, aes(x = longitude, y = latitude, size = n_incidents), color = "blue") +
+	scale_size(range = c(0, 12))
+```
+
+Plotly interactive map of shootings by state.
+
+```{r}
+gun_v_tidy %>%
+	filter(state != "Alaska", state != "Hawaii", longitude < 0) %>% 
+	mutate(n_affected = n_killed + n_injured) %>%
+	filter(n_affected > 0) %>% 
+	mutate(n_affected_cat = ifelse(n_affected %in% 5:9, "b",
+													ifelse(n_affected %in% 10:19, "c",
+													ifelse(n_affected %in% 20:34, "d",
+													ifelse(n_affected %in% 35:49, "e",
+													ifelse(n_affected > 50, "f", "a")))))) %>% 
+	mutate(city_state = str_c(city_or_county, state, sep = ", ")) %>% 
+	mutate(text_label = str_c(city_state, '\n', year,'\nKilled: ', n_killed, '\nInjured: ', n_injured)) %>% 
+  plot_ly(x = ~longitude, y = ~latitude, type = "scatter", mode = "markers",
+          alpha = 0.5, 
+          color = ~n_affected_cat,
+  				colors = "Accent",
+  				text = ~text_label)
+```
+
+
+
+
+
