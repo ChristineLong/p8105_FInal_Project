@@ -12,6 +12,7 @@ library(tidyverse)
 library(usmap)
 library(rvest)
 library(plotly)
+library(patchwork)
 
 theme_set(theme_bw() + theme(legend.position = "bottom"))
 ```
@@ -30,7 +31,8 @@ gun_v_tidy =
 	select(date:city_or_county, n_killed, n_injured, latitude, longitude) %>% 
 	separate(date, into = c("year", "month", "day"), sep = "-") %>% 
 	mutate(n_affected = n_killed + n_injured) %>%
-	filter(n_affected > 0)
+	filter(n_affected > 0) %>% 
+	mutate(mass_shooting = ifelse(n_affected >= 4, "Yes", "No"))
 ```
 
 ## Maps
@@ -59,7 +61,7 @@ Bubble map of mass shootings by state.
 ```{r}
 n_shooting_inc = 
 	gun_v_tidy %>% 
-	filter(n_affected >= 4) %>% 
+	filter(mass_shooting == "Yes") %>% 
 	group_by(state) %>% 
 	summarize(n_incidents = n())
 
@@ -70,7 +72,7 @@ usa = map_data("state")
 
 ggplot() +
 	geom_path(data = usa, aes(x = long, y = lat, group = group)) +
-	geom_point(data = usa_shooting_inc, aes(x = longitude, y = latitude, size = n_incidents), color = "blue") +
+	geom_point(data = usa_shooting_inc, aes(x = longitude, y = latitude, size = n_incidents), color = "darkseagreen3") +
 	scale_size(range = c(0, 12))
 ```
 
@@ -91,6 +93,47 @@ gun_v_tidy %>%
           color = ~n_affected_cat,
   				colors = "Accent",
   				text = ~text_label)
+```
+
+## Time trends
+
+```{r}
+n_yearly_shootings = 
+	gun_v_tidy %>% 
+	group_by(year) %>% 
+	summarize(count = n()) %>% 
+	filter(year != 2013, year != 2018) %>% 
+	mutate(year = as.numeric(year))
+
+n_yearly_mass_violence = 
+	gun_v_tidy %>% 
+	filter(mass_shooting == "Yes") %>% 
+	group_by(year) %>% 
+	summarize(count = n()) %>% 
+	filter(year != 2013, year != 2018) %>% 
+	mutate(year = as.numeric(year))
+	
+shootings = 
+	n_yearly_shootings %>% 
+  ggplot(aes(x = year, y = count, fill = year)) +
+  geom_bar(stat = "identity") +  
+	labs(
+    title = "Cumulative Number of Gun Violence Incidents per Year",
+    x = "Year",
+    y = "Count"
+  ) 
+
+mass_violence =
+	n_yearly_mass_violence %>% 
+	ggplot(aes(x = year, y = count, fill = year)) +
+  geom_bar(stat = "identity") +
+	labs(
+    title = "Cumulative Number of Mass Shootings per Year",
+    x = "Year",
+    y = "Count"
+  ) 
+
+shootings / mass_violence
 ```
 
 
