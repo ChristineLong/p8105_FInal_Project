@@ -1,0 +1,141 @@
+---
+title: "Gun Violence and Covariates"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(plotly)
+library(tidyverse)
+
+# fixed width dataframe
+
+merged_firearm_mortality <-
+	read_csv("./shiny_dataset/merged_firearm_mortality.csv") %>%
+	select(state_abb, year, crude_rate, deaths, population, law_strength) %>%
+	rename(state = state_abb) %>% 
+	unite(col = state_year, state, year, sep = "_")
+
+gun_violence <- read_csv("./shiny_dataset/gun_violence_tidy.csv") %>% 
+	sample_n(size = 25000)
+
+gun_violence_merged <- read_csv("./shiny_dataset/gun_violence_tidy.csv") %>%
+	group_by(state, year) %>%
+	summarize(total_killed = n(), total_injured = n()) %>% 
+	unite(col = state_year, state, year, sep = "_")
+
+unempl <- read_csv("./shiny_dataset/unempl.csv") %>% 
+	unite(col = state_year, state, year, sep = "_")
+
+merged_data <- full_join(x = gun_violence_merged, y = unempl, by = "state_year")
+merged_data <- full_join(x = merged_data, y = merged_firearm_mortality, by = "state_year")
+merged_data_wide <- merged_data %>% 
+	separate(col = state_year, into = c("state", "year"), sep = "_")
+
+merged_data <- merged_data_wide %>% 
+	gather(key = type_variable, value = value, total_killed:law_strength) %>% 
+	mutate(year = as.numeric(year)) %>% 
+	arrange(year)
+
+
+
+```
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+
+```{r}
+# copy paste ssamatab1 from zanis_labor_statistics.Rmd
+# keep updated to avoid version control
+
+year <- merged_data %>% distinct(year) %>% pull
+
+selectInput("year", label = h3("Choose year"), choices = as.list(year), selected = 2015)
+
+type_variable <- merged_data %>% distinct(type_variable) %>% pull()
+
+radioButtons("variable_type", label = h3("Choose variable type"),
+    choices = type_variable, 
+    selected = "law_strength")
+
+
+
+```
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### US MAP
+
+```{r}
+
+
+
+renderPlotly({
+	geo1 <- list(
+	scope = "usa",
+	projection = list(type = "state"),
+	showlakes = TRUE,
+	lakecolor = toRGB("white")
+	)
+	
+	merged_data %>% 
+	filter(type_variable == input$variable_type, year == input$year) %>% 
+	plot_geo(locationmode = "USA-states") %>% 
+	add_trace(
+		z = ~value,
+		locations = ~state,
+		color = ~value,
+		colors = "Reds"
+		) %>%
+	add_markers(
+		data = gun_violence %>% filter(year == input$year),
+		y = ~latitude,
+		x = ~longitude,
+		alpha = 0.3,
+		showlegend = FALSE) %>%
+	layout(
+		geo = geo1
+	)
+})
+
+
+
+# rsconnect::deployApp("./shiny_states.Rmd")
+
+```
+
+
+### Regression
+
+```{r}
+
+lm_data <- merged_data %>% 
+	spread(key = type_variable, value = value)
+
+crude_rate_lm <- lm(data = lm_data %>% filter(year == 2015),
+										formula = crude_rate ~ law_strength +
+											population + unemployment_rate)
+
+renderPlotly({
+	
+	merged_data_wide <- merged_data_wide %>% filter(year == input$year)
+						
+	p_data <- ggplot(merged_data_wide,
+									 aes_string(x = input$variable_type, y = "crude_rate")) +
+		geom_point() +
+		geom_smooth(method = "lm")
+	
+	ggplotly(p_data)
+
+})
+
+
+```
+
