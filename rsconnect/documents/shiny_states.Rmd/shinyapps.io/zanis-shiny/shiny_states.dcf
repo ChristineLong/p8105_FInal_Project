@@ -5,6 +5,6 @@ account: zanis-shiny
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 582725
-bundleId: 1721444
+bundleId: 1734723
 url: https://zanis-shiny.shinyapps.io/shiny_states/
-when: 1543256691.81113
+when: 1543784511.16519
