@@ -81,18 +81,21 @@ Plotly interactive map of shootings by state.
 ```{r}
 gun_v_tidy %>%
 	filter(state != "Alaska", state != "Hawaii", longitude < 0) %>% 
-	mutate(n_affected_cat = ifelse(n_affected %in% 4:9, "2: 4-9",
-													ifelse(n_affected %in% 10:19, "3: 10-19",
-													ifelse(n_affected %in% 20:34, "4: 20-34",
-													ifelse(n_affected %in% 35:49, "5: 35-49",
-													ifelse(n_affected > 50, "6: 50+", "1: 1-3")))))) %>% 
-	mutate(city_state = str_c(city_or_county, state, sep = ", ")) %>% 
-	mutate(text_label = str_c(city_state, '\n', year,'\nKilled: ', n_killed, '\nInjured: ', n_injured)) %>% 
+	mutate(n_affected_cat = ifelse(n_affected %in% 4:9, 2,
+													ifelse(n_affected %in% 10:19, 3,
+													ifelse(n_affected %in% 20:34, 4,
+													ifelse(n_affected %in% 35:49, 5,
+													ifelse(n_affected > 50, 6, 1)))))) %>% 
+	mutate(n_affected_cat = as.factor(n_affected_cat),
+				 n_affected_cat = recode_factor(n_affected_cat, `1` = "1-3 affected", `2` = "4-9 affected", `3` = "10-19 affected", `4` = "20-34 affected", `5` = "35-49 affected", `6` = "50+ affected"),
+				 city_state = str_c(city_or_county, state, sep = ", "), 
+				 text_label = str_c(city_state, '\n', year,'\nKilled: ', n_killed, '\nInjured: ', n_injured)) %>% 
   plot_ly(x = ~longitude, y = ~latitude, type = "scatter", mode = "markers",
           alpha = 0.5, 
           color = ~n_affected_cat,
   				colors = "Accent",
-  				text = ~text_label)
+  				text = ~text_label) %>% 
+	layout(legend = list(x = 0.8, y = 0.1))
 ```
 
 ## Time trends
@@ -136,7 +139,7 @@ mass_violence =
 shootings / mass_violence
 ```
 
-Proportion of deaths in a given gun violence incidence.
+Lethality proportion - proportion of deaths in a given gun violence incidence.
 
 ```{r}
 prop_data = 
@@ -144,11 +147,7 @@ prop_data =
 	mutate(prop_killed = n_killed / (n_killed + n_injured))
 
 prop_data %>% 
-	group_by(year) %>% 
-	summarize(mean_prop = mean(prop_killed)) %>% 
-	filter(year != 2013, year != 2018) %>% 
-	ggplot(aes(x = year, y = mean_prop)) +
-	geom_point()
+	summarize(mean = mean(prop_killed))
 
 prop_data %>% 
 	group_by(state) %>% 
@@ -156,6 +155,13 @@ prop_data %>%
 	mutate(state = forcats::fct_reorder(state, mean_prop)) %>% 
 	ggplot(aes(x = state, y = mean_prop)) +
 	geom_point() +
-	theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 6))
+	geom_abline(slope = 0, intercept = 0.346, color = "purple", linetype = "dashed") +
+	theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 6)) +
+	labs(
+    x = " ",
+    y = "Lethality Proportion"
+  ) 
 ```
+
+
 
