@@ -42,32 +42,76 @@ merged_data <- merged_data_wide %>%
 	mutate(year = as.numeric(year)) %>% 
 	arrange(year)
 
+year <- c(2000:2016)
+type_variable <- (merged_data %>% distinct(type_variable) %>% pull())[3:6]
+
+firearm_mortality = read_csv("./devon_data/cdc_firearm_mortality_data.csv", na = "Unreliable") %>% 
+	janitor::clean_names() %>% 
+	select(-ten_year_age_groups_code, -injury_mechanism_all_other_leading_causes_code, -race_code, death_cause = injury_mechanism_all_other_leading_causes) %>% 
+	mutate(ten_year_age_groups = factor(ten_year_age_groups, levels = c("1-4 years", "5-14 years", "15-24 years", "25-34 years", "35-44 years", "45-54 years", "55-64 years", "65-74 years", "75-84 years", "85+ years")))
+
 
 ```
 
-Column {.sidebar}
+Page 1
+===================================== 
+
+Column {.tabset}
 -----------------------------------------------------------------------
 
 
 ```{r}
-# copy paste ssamatab1 from zanis_labor_statistics.Rmd
-# keep updated to avoid version control
+# navbarPage("shiny_states",
+					 # tabPanel("US MAP",
+fluidRow(column(6,
+					 				 sidebarPanel(width = 200,
+					 				 	selectInput("year",
+					 				 							label = h3("Choose year"),
+					 				 							choices = as.list(year),
+					 				 							selected = 2015))),
+					 		
+					 # tabPanel("Regression",
+				 				 column(6,
+					 sidebarPanel(width = 12,
+					 				 selectInput("variable_type",
+					 				 						 label = h3("Choose variable"),
+					 				 						 choices = type_variable,
+					 				 						 selected = "law_strength"))))
 
-year <- merged_data %>% distinct(year) %>% pull
 
-selectInput("year", label = h3("Choose year"), choices = as.list(year), selected = 2015)
 
-type_variable <- merged_data %>% distinct(type_variable) %>% pull()
 
-radioButtons("variable_type", label = h3("Choose variable type"),
-    choices = type_variable, 
-    selected = "law_strength")
+renderPlotly({
+	geo1 <- list(
+	scope = "usa",
+	projection = list(type = "state"),
+	showlakes = TRUE,
+	lakecolor = toRGB("white")
+	)
+	
+	merged_data %>% 
+	filter(type_variable == input$variable_type, year == input$year) %>% 
+	plot_geo(locationmode = "USA-states") %>% 
+	add_trace(
+		z = ~value,
+		locations = ~state,
+		color = ~value,
+		colors = "Reds"
+		) %>%
+	layout(
+		geo = geo1
+	)
+})
+
+
+
+
 
 
 
 ```
 
-Row {.tabset .tabset-fade}
+Column {.tabset .tabset-fade}
 -----------------------------------------------------------------------
 
 ### US MAP
@@ -93,12 +137,6 @@ renderPlotly({
 		color = ~value,
 		colors = "Reds"
 		) %>%
-	add_markers(
-		data = gun_violence %>% filter(year == input$year),
-		y = ~latitude,
-		x = ~longitude,
-		alpha = 0.3,
-		showlegend = FALSE) %>%
 	layout(
 		geo = geo1
 	)
@@ -110,31 +148,60 @@ renderPlotly({
 
 ```
 
+Page 2
+===================================== 
 
-### Regression
+Column {.tabset}
+-----------------------------------------------------------------------
+
+### Sex, Age Group
 
 ```{r}
 
-lm_data <- merged_data %>% 
-	spread(key = type_variable, value = value)
 
-crude_rate_lm <- lm(data = lm_data %>% filter(year == 2015),
-										formula = crude_rate ~ law_strength +
-											population + unemployment_rate)
+
 
 renderPlotly({
-	
-	merged_data_wide <- merged_data_wide %>% filter(year == input$year)
-						
-	p_data <- ggplot(merged_data_wide,
-									 aes_string(x = input$variable_type, y = "crude_rate")) +
-		geom_point() +
-		geom_smooth(method = "lm")
-	
-	ggplotly(p_data)
-
+  age_race <- firearm_mortality %>% 
+  filter(year == input$year) %>% 
+	group_by(ten_year_age_groups, race) %>%
+	summarize(n_deaths = sum(deaths),
+						n_population = sum(population)) %>% 
+	mutate(crude_rate = (n_deaths/n_population) * 100000) %>% 
+  spread(key = race, value = crude_rate) %>%
+  janitor::clean_names() %>% 
+  plot_ly(x = ~ten_year_age_groups,
+  				y = ~white,
+  				name = "White",
+  				type = "bar") %>% 
+  	add_trace(y = ~american_indian_or_alaska_native,
+  						name = "American Indian or Alaska Native") %>% 
+  	add_trace(y = ~asian_or_pacific_islander,
+  						name = "Asian or Pacific Islander") %>% 
+  	add_trace(y = ~american_indian_or_alaska_native,
+  						name = "American Indian or Alaska Native") %>% 
+  	layout(barmode = "stack")
+  
+# 	ggplot(aes(fill = race, x = ten_year_age_groups, y = crude_rate, color = race)) +
+# 	geom_bar(stat = "identity") +
+# 	theme(axis.text.x = element_text(angle = 60, hjust = 1)) + 
+# 	labs(
+#     title = "Crude Firearm Death Rate Across All States by Age Group and Race, 1999",
+#     x = "Age Group",
+#     y = "Crude Firearm Death Rate",
+#     caption = "Data from the CDC Wonder Dataset")
+#   
+#   ggplotly(age_race)
 })
-
 
 ```
 
+### Description
+
+Microarray data matrix for 80 experiments with Saccharomyces Cerevisiae
+organism extracted from R's `biclust` package.
+
+Sebastian Kaiser, Rodrigo Santamaria, Tatsiana Khamiakova, Martin Sill, Roberto
+  Theron, Luis Quintales, Friedrich Leisch and Ewoud De Troyer. (2015). biclust:
+  BiCluster Algorithms. R package version 1.2.0.
+  http://CRAN.R-project.org/package=biclust
