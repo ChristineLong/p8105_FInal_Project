@@ -161,8 +161,51 @@ renderPlotly({
 
 ```
 
-
-
 ### Description
 
 (Fill description here)
+
+Page 3
+===================================== 
+
+Column
+-----------------------------------------------------------------------
+
+```{r}
+gun_spread <- merged_data %>%
+	filter(year == 2016) %>% 
+	spread(key = type_variable, value = Statistics) %>% 
+	janitor::clean_names() %>% 
+	filter(complete.cases(.)) %>% 
+	mutate(law_strength_2016_only = 51 - law_strength_2016_only)
+
+cr_law <- lm(data = gun_spread, formula = crude_rate ~ law_strength_2016_only)
+cr_unempl <- lm(data = gun_spread, formula = crude_rate ~ unemployment_rate)
+
+
+renderPlotly({
+	gun_spread %>% 
+	plot_ly() %>% 
+	add_markers(x = ~unemployment_rate, y = ~crude_rate) %>% 
+	add_lines(y = fitted(cr_unempl), x = ~unemployment_rate)
+
+})
+
+
+```
+
+Column
+-----------------------------------------------------------------------
+
+```{r}
+renderPlotly({
+	gun_spread %>% 
+	plot_ly() %>% 
+	add_markers(x = ~law_strength_2016_only, y = ~crude_rate) %>% 
+	add_lines(y = fitted(cr_law), x = ~law_strength_2016_only)
+
+})
+
+```
+
+

@@ -78,6 +78,19 @@ merged_data_wide %>%
 	  	y = "CDC Firearm Total Deaths"
 	  )
 
+gun_2016 <- merged_data_wide %>% 
+	filter(year == 2016, complete.cases(.))
+
+
+gun_2016_lm <- lm(data = gun_2016, crude_rate ~ unemployment_rate + law_strength + population)
+
+library(plotly)
+
+summary(gun_2016_lm)
+gun_2016 %>% plot_ly() %>% 
+	add_markers(x = ~unemployment_rate, y = ~crude_rate, z = ~law_strength) %>% 
+	add_lines(x = ~unemployment_rate, y = fitted(gun_2016_lm), z = ~law_strength)
+
 ```
 
 *Comments:*
