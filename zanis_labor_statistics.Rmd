@@ -66,23 +66,6 @@ ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
 # write_csv(path = "./shiny_dataset/tidy_ssamatab1.csv", x = ssamatab1)
 
 
-unempl_files <-
-	tibble(state = list.files("./data/unemployment", full.names = TRUE)) %>%
-	mutate(data = map(.x = state, .f = ~read_csv(.x))) %>%
-	mutate(state = str_extract(state, "[A-Z]{4}"))
-
-unempl <- unempl_files$data[[1]]
-for (i in 2:nrow(unempl_files)) {
-	unempl <- full_join(unempl, unempl_files$data[[i]], by = "DATE")
-}
-unempl <- unempl %>% 
-	gather(key = state, value = unemployment_rate, AKUR:WYUR) %>% 
-	mutate(state = str_extract(state, "^[A-Z]{2}")) %>%
-	mutate(year = lubridate::year(DATE)) %>% 
-	group_by(state, year) %>% 
-	summarize(unemployment_rate = mean(unemployment_rate))
-	
-# write_csv(x = unempl, path = "./shiny_dataset/unempl.csv")
 
 
 	
@@ -92,9 +75,6 @@ usmap::plot_usmap(data = data.frame(
 		select(state, rate)),
 	values = "rate") +
 	scale_fill_continuous(low = "white", high = "red")
-
-
-
 
 
 # take a look at unemployment rate of New York-Newark_Jersey area
@@ -116,8 +96,6 @@ ssamatab1 %>%
 	  )
 
 ```
-
-
 
 
 ### Try plotly
@@ -158,5 +136,34 @@ plot_geo(ssamatab1, locationmode = "USA-states") %>%
 	)
 
 ```
+
+### unemployment data (State)
+
+https://fred.stlouisfed.org/search?st=unemployment+rate
+
+Unemployment data of 51 states (including District of Columbia) from 1976 to 2018 were downloaded and extracted from FRED economic research website. Tidy dataset was write into a "unempl.csv" file under "/zanis_dataset" folder.
+
+```{r}
+
+unempl_files <-
+	tibble(state = list.files("./zanis_dataset/unemployment", full.names = TRUE)) %>%
+	mutate(data = map(.x = state, .f = ~read_csv(.x))) %>%
+	mutate(state = str_extract(state, "[A-Z]{4}"))
+
+unempl <- unempl_files$data[[1]]
+for (i in 2:nrow(unempl_files)) {
+	unempl <- full_join(unempl, unempl_files$data[[i]], by = "DATE")
+}
+
+unempl <- unempl %>% 
+	gather(key = state, value = unemployment_rate, AKUR:WYUR) %>% 
+	mutate(state = str_extract(state, "^[A-Z]{2}")) %>%
+	mutate(year = lubridate::year(DATE)) %>% 
+	group_by(state, year) %>% 
+	summarize(unemployment_rate = mean(unemployment_rate))
+	
+# write_csv(x = unempl, path = "./zanis_dataset/unempl.csv")
+```
+
 
 
