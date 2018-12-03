@@ -1,0 +1,204 @@
+---
+title: "Gun Control"
+output: html_document
+---
+
+
+```{r include=FALSE}
+#Load packages
+library(tidyverse)
+library(rvest)
+library(httr)
+library(plotly)
+```
+
+
+
+```{r echo=FALSE}
+#Gun application and approval data
+clean_fun = function(address, area){
+  readxl::read_xlsx(address, sheet = "Data", range = area) %>% 
+  rename(state = X__1) %>% 
+  janitor::clean_names()
+}
+
+
+total_pop = clean_fun("./data/population-in-the-states-of-the-us-as-of-2017.xlsx", "B5:C56")
+
+approved_lic = clean_fun("./data/number-of-federal-firearms-licensees-in-the-us-in-2017-by-state.xlsx", "B5:C57") %>% 
+  filter(state != "Other Territories")
+
+back_check = clean_fun("./data/nics-background-checks-done-by-us-firearms-licensees-2017-by-state.xlsx", "B5:C56")
+
+gun_lic = inner_join(approved_lic, back_check, by = "state") %>% 
+  inner_join(total_pop, by = "state") %>% 
+  mutate(approval_rate = number_of_federal_firearms_licensees/number_of_residents_in_millions/1000000,
+         application_rate = number_of_background_checks/number_of_residents_in_millions/1000000)
+```
+
+
+
+
+```{r include= FALSE}
+#Mortality data
+
+# Detailed Firearm Mortality Datatsets by Race, Age
+firearm_mortality = read_csv("./data/cdc_firearm_mortality_data.csv", na = "Unreliable") %>% 
+	janitor::clean_names() %>% 
+	select(-ten_year_age_groups_code, -injury_mechanism_all_other_leading_causes_code, -race_code, death_cause =  injury_mechanism_all_other_leading_causes) %>% 
+	mutate(ten_year_age_groups = factor(ten_year_age_groups, levels = c("1-4 years", "5-14 years", "15-24 years", "25-34 years", "35-44 years", "45-54 years", "55-64 years", "65-74 years", "75-84 years", "85+ years")))
+# Summary Firearm Mortality Dataset by Year
+firearm_mortality_summary = readxl::read_excel("./data/cdc_firearm_all_ages.xlsx") %>% 
+	janitor::clean_names() %>% 
+	select(-year_code, -injury_mechanism_all_other_leading_causes_code, death_cause= injury_mechanism_all_other_leading_causes)
+
+# Created table with state name and state abbreviations crosswalk
+st_crosswalk = tibble(state = state.name) %>%
+   bind_cols(tibble(abb = state.abb)) %>% 
+	 bind_rows(tibble(state = "District of Columbia", abb = "DC"))
+# Joined abbreviation dataset with summary firearm mortality dataset
+clean_firearm_mortality = left_join(firearm_mortality_summary, st_crosswalk, by = "state") %>% 
+	rename(state_abb = abb) %>% 
+  filter(year == max(year))
+```
+
+
+```{r echo=FALSE}
+###Gun climate data
+
+# website URL
+url = "https://lawcenter.giffords.org/scorecard/#rankings"
+gun_climate_url = read_html(url)
+# extract table and clean data
+gun_climate_data = 
+	gun_climate_url %>% 
+  html_nodes(css = "table") %>% 
+  .[[1]] %>% 
+  html_table(header = TRUE) %>% 
+  as.tibble() %>% 
+	janitor::clean_names() %>% 
+	rename(
+		law_strength = gun_law_strength_ranked, 
+		grade_2017 = x2017grade, 
+		death_rate_rank = gun_death_rate_ranked, 
+		death_rate = gun_death_rate_per_100k) %>% 
+	mutate(
+    grade_2017 = factor(grade_2017, 
+                      levels = c("A", "A-", "B+", "B", "C+", "C", "C-", "D", "D-", "F")), 
+    grade_2017 = fct_collapse(grade_2017, 
+    													A = c("A", "A-"), 
+    													B = c("B+", "B"), 
+    													C = c("C+", "C", "C-"), 
+    													D = c("D", "D-")), 
+    state_abb = state.abb)
+
+```
+
+
+
+
+
+### Complete dataset with all info for gun control
+
+To quantify how strict are gun controls in different states, we are using:
+
++ [The NICS background checks](https://www.statista.com/statistics/249687/number-of-background-checks-done-by-the-nics-in-the-us-by-state/) are used by Federal Firearms Licensees (FFLs) to instantly determine whether a prospective buyer is eligible to buy firearms or explosives. This data is used to approximate how many people tried to apply for license in each state; 
++ [The number of federal firearms licensees in the U.S.](https://www.statista.com/statistics/215670/number-of-federal-firearms-licensees-in-the-us-by-state/) is used to approximate how many people actually got approved for gun licenses in each state;
++ The approval rate uses the proportion of licensees in the total population of the state to indicate the difficulties in getting apprroved for gun license;
++ The application rate uses the proportion of background checks in the total population of the state to indicate people's willingness in applying for guns;
++ Crude rate is the mortality rate due to gun violence;
++ A numerical variable for law strength to indicate legislation strength in differnet states. The higher of law_strength value is, the less strict gun laws in the corresponding state.
++ For consistency purposes, District of Columbia is not included; for gun control panel, we focus on year 2017.
+
+#### Numerical variables
+```{r echo=FALSE}
+gun_control = gun_climate_data %>% 
+  inner_join(gun_lic, by = "state") %>% 
+  inner_join(clean_firearm_mortality, by = "state")
+
+
+skimr::skim(gun_control) %>%
+            select(variable:stat,value) %>%
+            filter((stat != "hist") , (stat != "top_counts"),(type %in% c("numeric","integer"))) %>% 
+            spread(key = stat,value = value) %>% 
+  knitr::kable(digits = 1) 
+```
+
+#### Categorical variables
+```{r echo=FALSE}
+skimr::skim(gun_control) %>%
+            select(variable:stat,value) %>%
+            filter((stat != "hist") , (stat != "top_counts"),(type %in% c("character","factor"))) %>% 
+            spread(key = stat,value = value) %>% 
+  knitr::kable(digits = 1) 
+```
+
+As we can see, the dataset has no missing data. All the information, including population statistics, background check / applications statistics, approved licensees statistics,  are generalized for different states (except for D.C.).
+
+
+### Approved license vs. law strength
+
+The first plot show the relationship between the percentage of people get approved for gun licenses, mortality rate and the law strength in each state. 
+```{r echo=FALSE}
+
+gun_control %>% 
+  mutate(text_label = str_c("State:",state,  "\nCrude Rate:", crude_rate)) %>% 
+  plot_ly(x = ~approval_rate, y = ~law_strength, 
+          type = "scatter", mode = "markers", marker = list(size = ~crude_rate),
+          alpha = 0.8, 
+          color = ~law_strength,
+          text = ~ text_label) %>%
+  layout(
+    title = "Approval percentage vs. Law Strength",
+    xaxis = list(title = "Percentage of people approved for guns among total population"), 
+    yaxis = list(title = "Law Strength"),
+    annotations = list(
+      x = 0.0012,
+      y = 55,
+      text = "Size of dots shows crude rate",
+      xref = "x",
+      yref = "y",
+      ax = 0,
+      ay = 0
+))
+         
+```
+
+As we can see in this plot, in different states, the percentage of people get approved for gun licenses is positively connected with law strength. This is intuitive because it's easier to get approved for guns in states with less strict gun laws. Also, with less strict gun laws, states generally have higher mortality rate. An regression model is built to further explain this relationship in model panel.
+
+
+## Application for guns vs. law strength
+The second plot shows the relationship application percentage (proportion of people applying for the license in total population), mortality rate and the law strength.
+
+```{r echo=FALSE}
+
+gun_control %>% 
+  mutate(text_label = str_c("State:",state, '\nCrude Rate: ', crude_rate)) %>% 
+  plot_ly(x = ~application_rate, y = ~law_strength,
+          type = "scatter", mode = "markers", marker = list(size = ~crude_rate),
+          alpha = 0.8, 
+          color = ~law_strength,
+          text = ~ text_label) %>%
+  layout(
+    title = "Application percentage vs. Law Strength",
+    xaxis = list(title = "Percentage of people applied for guns among total population"), 
+    yaxis = list(title = "Law Strength"),
+    annotations = list(
+  x = 0.8,
+  y = 55,
+  text = "Size of dots shows crude rate",
+  xref = "x",
+  yref = "y",
+  ax = 0,
+  ay = 0
+))
+
+```
+
+As we can see in the plot, 
+
++ In most states, the percentage of people tried to apply for gun licenses is relatively same across the country, no matter how strict the law is. This shows that people in different state share equal passion to apply for guns.  
++ The only exception is Kentucky. According to [Wikipedia](https://en.wikipedia.org/wiki/Gun_laws_in_Kentucky), people don't need to license or permit to own guns for private uses. This explains exceptional passion to apply for guns in Kentucky, leading to an exceptional high proportion of application for background checks. The reason that the total proportion is greater than one might be companies applying for background checks for public gun sales.
+
+
+
