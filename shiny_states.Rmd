@@ -4,6 +4,7 @@ output:
   flexdashboard::flex_dashboard:
     orientation: columns
     vertical_layout: fill
+    source_code: embed
 runtime: shiny
 ---
 
@@ -13,40 +14,36 @@ library(shiny)
 library(plotly)
 library(tidyverse)
 
-# fixed width dataframe
 
+# for us map
 merged_firearm_mortality <-
 	read_csv("./shiny_dataset/merged_firearm_mortality.csv") %>%
 	select(state_abb, year, crude_rate, deaths, population, law_strength) %>%
 	rename(state = state_abb) %>% 
 	unite(col = state_year, state, year, sep = "_")
 
-gun_violence <- read_csv("./shiny_dataset/gun_violence_tidy.csv") %>% 
-	sample_n(size = 25000)
-
-gun_violence_merged <- read_csv("./shiny_dataset/gun_violence_tidy.csv") %>%
-	group_by(state, year) %>%
-	summarize(total_killed = n(), total_injured = n()) %>% 
-	unite(col = state_year, state, year, sep = "_")
-
 unempl <- read_csv("./shiny_dataset/unempl.csv") %>% 
 	unite(col = state_year, state, year, sep = "_")
 
-merged_data <- full_join(x = gun_violence_merged, y = unempl, by = "state_year")
-merged_data <- full_join(x = merged_data, y = merged_firearm_mortality, by = "state_year")
-merged_data_wide <- merged_data %>% 
-	separate(col = state_year, into = c("state", "year"), sep = "_")
+# merged_data <- full_join(x = gun_violence_merged, y = unempl, by = "state_year")
+merged_data <- full_join(x = unempl, y = merged_firearm_mortality, by = "state_year") %>%
+	separate(col = state_year, into = c("state", "year"), sep = "_") %>% 
+	gather(key = type_variable, value = Statistics, unemployment_rate:law_strength) %>% 
+	mutate(year = as.numeric(year), Statistics = round(Statistics, 3)) %>% 
+	arrange(year) %>% 
+	filter(!is.na(Statistics)) %>%
+	mutate(type_variable = recode(type_variable,
+																unemployment_rate = "Unemployment Rate",
+																crude_rate = "Crude Rate",
+																deaths = "Deaths",
+																population = "Population",
+																law_strength = "Law Strength (2016 only)"))
+	
 
-merged_data <- merged_data_wide %>% 
-	gather(key = type_variable, value = Statistics, total_killed:law_strength) %>% 
-	mutate(year = as.numeric(year)) %>% 
-	arrange(year)
+state_abb <- state.name
+names(state_abb) <- state.abb
 
-year <- c(2000:2016)
-type_variable <- (merged_data %>% distinct(type_variable) %>% pull())[3:6]
-names(type_variable) <- c("Unemployment Rate", "Crude Rate", "Deaths", "Population")
-
-
+# for barplot
 firearm_mortality = read_csv("./devon_data/cdc_firearm_mortality_data.csv", na = "Unreliable") %>% 
 	janitor::clean_names() %>% 
 	select(-ten_year_age_groups_code, -injury_mechanism_all_other_leading_causes_code, -race_code, death_cause = injury_mechanism_all_other_leading_causes) %>% 
@@ -64,8 +61,12 @@ Column {.sidebar}
 
 ```{r}
 
+type_variable <- (merged_data %>% distinct(type_variable) %>% pull())
+year <- c(2000:2016)
+
 selectInput("year_1", label = h3("Choose year"),
-						choices = as.list(year), selected = 2015)
+						choices = as.list(year),
+						selected = 2015)
 
 selectInput("variable_type", label = h3("Choose variable"),
 						choices = type_variable, selected = "law_strength")
@@ -96,7 +97,8 @@ renderPlotly({
 		z = ~Statistics,
 		locations = ~state,
 		color = ~Statistics,
-		colors = "Reds"
+		colors = "Reds",
+		text = ~paste(type_variable, state_abb[state], sep = "<br />")
 		) %>%
 	layout(
 		geo = geo1,

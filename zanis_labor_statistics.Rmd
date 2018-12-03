@@ -157,10 +157,6 @@ plot_geo(ssamatab1, locationmode = "USA-states") %>%
 		geo = geo1, geo2 = g2
 	)
 
-df <- read.csv("https://raw.githubusercontent.com/plotly/datasets/master/2011_us_ag_exports.csv")
-
-df <- read.csv('https://raw.githubusercontent.com/plotly/datasets/master/2014_ebola.csv')
-
 ```
 
 
