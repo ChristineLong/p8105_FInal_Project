@@ -1,0 +1,53 @@
+---
+title: "CDI"
+author: 'Zanis Fang, UID: ZF2213'
+date: "11/5/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+```
+
+```{r}
+
+list_quest <- c(
+"Poverty",
+"Current smoking among adults aged >= 18 years",
+"Prevalence of sufficient sleep among adults aged >= 18 years",
+"Fair or poor self-rated health status among adults aged >= 18 years",
+"Overweight or obesity among adults aged >= 18 years",
+"No leisure-time physical activity among adults aged >= 18 years",
+"Recent mentally unhealthy days among adults aged >= 18 years",
+"Prevalence of diagnosed diabetes among adults aged >= 18 years",
+"Heavy drinking among adults aged >= 18 years",
+"Disability among adults aged >= 65 years")
+
+
+cdi_file <- list.files("./dataset/", full.names = TRUE)
+cdi_raw <- read_csv(cdi_file[6])
+cdi <- cdi_raw %>%
+	# filter(Topic == "Mental Health", DataValueType == "Age-adjusted Mean") %>%
+	separate(GeoLocation, into = c("latitude", "longititude"), sep = ",") %>%
+	mutate(latitude = str_replace(string = latitude, pattern = "\\(", replacement = ""),
+				 longititude = str_replace(string = longititude, pattern = "\\)", replacement = ""),
+				 latitude = as.numeric(latitude),
+				 longititude = as.numeric(longititude)
+	) %>% 
+	filter(Question %in% list_quest) %>% 
+	filter(LocationAbbr != "US",
+				 YearStart != 2010,
+				 Stratification1 == "Overall",
+				 DataValueType %in% c("Crude Prevalence", "Mean")) %>%
+	select(YearStart:DataValue, -DataSource, -Response, -DatavalueFootnote, -DataValueFootnoteSymbol, -YearEnd) %>%
+	select(-Topic, -DataValueUnit, -DataValueType) %>% 
+	spread(key = Question, value = DataValue)
+
+cdi %>% View	
+colnames(cdi) <- c("year", "state", "state_name", "smoking", "disability_65", "self_rated_health", "drinking", "leisure_phys_act", "overweight", "poverty", "diabetes", "sleep", "mental_health")
+
+
+```
+
