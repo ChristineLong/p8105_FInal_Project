@@ -15,21 +15,24 @@ library(plotly)
 
 
 ```{r echo=FALSE}
-#Gun application and approval data
+# Create a function to import and clean data
 clean_fun = function(address, area){
   readxl::read_xlsx(address, sheet = "Data", range = area) %>% 
   rename(state = X__1) %>% 
   janitor::clean_names()
 }
 
-
+# Import the total population data 
 total_pop = clean_fun("./data/population-in-the-states-of-the-us-as-of-2017.xlsx", "B5:C56")
 
+# Import the approved license data
 approved_lic = clean_fun("./data/number-of-federal-firearms-licensees-in-the-us-in-2017-by-state.xlsx", "B5:C57") %>% 
   filter(state != "Other Territories")
 
+# Import the background check data
 back_check = clean_fun("./data/nics-background-checks-done-by-us-firearms-licensees-2017-by-state.xlsx", "B5:C56")
 
+# Merge the datasets together
 gun_lic = inner_join(approved_lic, back_check, by = "state") %>% 
   inner_join(total_pop, by = "state") %>% 
   mutate(approval_rate = number_of_federal_firearms_licensees/number_of_residents_in_millions/1000000,
