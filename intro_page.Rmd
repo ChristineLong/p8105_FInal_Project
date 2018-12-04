@@ -1,5 +1,5 @@
 ---
-title: "Overview of Gun Violence"
+title: "Gun Violence in the United States"
 output: html_document
 ---
 
