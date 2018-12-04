@@ -53,11 +53,15 @@ merged_data <- full_join(x = merged_data, y = merged_firearm_mortality, by = "st
 	
 # write_csv(merged_data, "./zanis_dataset/merged_data.csv")
 
-
 # for barplot
 firearm_mortality = read_csv("./devon_data/cdc_firearm_mortality_data.csv", na = "Unreliable") %>% 
 	janitor::clean_names() %>% 
 	select(-ten_year_age_groups_code, -injury_mechanism_all_other_leading_causes_code, -race_code, death_cause = injury_mechanism_all_other_leading_causes) %>% 
+	mutate(ten_year_age_groups = factor(ten_year_age_groups, levels = c("1-4 years", "5-14 years", "15-24 years", "25-34 years", "35-44 years", "45-54 years", "55-64 years", "65-74 years", "75-84 years", "85+ years")))
+
+add_hispanic <- read_delim("./data/Firearm Mortality_Hispanic.txt", delim = "\t") %>%
+	janitor::clean_names() %>% 
+	select(-ten_year_age_groups_code, -injury_mechanism_all_other_leading_causes_code, -notes, -hispanic_origin_code, death_cause = injury_mechanism_all_other_leading_causes) %>% 
 	mutate(ten_year_age_groups = factor(ten_year_age_groups, levels = c("1-4 years", "5-14 years", "15-24 years", "25-34 years", "35-44 years", "45-54 years", "55-64 years", "65-74 years", "75-84 years", "85+ years")))
 
 
@@ -139,7 +143,7 @@ selectInput("year_2", label = h3("Choose year"),
 
 
 
-Column {.tabset}
+Row
 -----------------------------------------------------------------------
 
 ### Crude Firearm Death Rate Across All States by Age Group and Race
@@ -173,6 +177,42 @@ renderPlotly({
 })
 
 ```
+
+Row
+-----------------------------------------------------------------------
+
+### Crude Firearm Death Rate Across All States by Age Group and Hispanic Origin
+
+```{r}
+renderPlotly({
+  age_hispanic <- add_hispanic %>% 
+  filter(year == input$year_2) %>% 
+	group_by(ten_year_age_groups, hispanic_origin) %>%
+	summarize(n_deaths = sum(deaths),
+						n_population = sum(population)) %>% 
+	mutate(crude_rate = (n_deaths/n_population) * 100000) %>% 
+  spread(key = hispanic_origin, value = crude_rate) %>%
+  janitor::clean_names() %>% 
+  plot_ly(x = ~ten_year_age_groups,
+  				y = ~not_hispanic_or_latino,
+  				name = "Not Hispanic or Latino",
+  				type = "bar") %>% 
+  	add_trace(y = ~hispanic_or_latino,
+  						name = "Hispanic or Latino") %>% 
+  	layout(barmode = "stack",
+  				 xaxis = list(title = "Age Groups"),
+  				 yaxis = list(title = "Crude Firearm Death Rate")
+  				 )
+
+})
+
+
+```
+
+
+
+Row
+-----------------------------------------------------------------------
 
 ### Description
 
