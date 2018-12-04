@@ -176,3 +176,5 @@ Four-predictor model seems to have slightly lower root mean square errors than s
 
 Four-predictor model (disability, smoking, unemployment rate, law strength) seems to perform a little better than six-predictor model (drinking, law strength, leisure, self-rated health, smoking and unemployment rate). Model diagnosis shows that the residuals of both models agree with the underlying assumption.
 
+test
+
