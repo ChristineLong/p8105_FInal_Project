@@ -60,11 +60,6 @@ firearm_mortality = read_csv("./devon_data/cdc_firearm_mortality_data.csv", na =
 	select(-ten_year_age_groups_code, -injury_mechanism_all_other_leading_causes_code, -race_code, death_cause = injury_mechanism_all_other_leading_causes) %>% 
 	mutate(ten_year_age_groups = factor(ten_year_age_groups, levels = c("1-4 years", "5-14 years", "15-24 years", "25-34 years", "35-44 years", "45-54 years", "55-64 years", "65-74 years", "75-84 years", "85+ years")))
 
-add_hispanic <- read_delim("./data/Firearm Mortality_Hispanic.txt", delim = "\t") %>%
-	janitor::clean_names() %>% 
-	select(-ten_year_age_groups_code, -injury_mechanism_all_other_leading_causes_code, -notes, -hispanic_origin_code, death_cause = injury_mechanism_all_other_leading_causes) %>% 
-	mutate(ten_year_age_groups = factor(ten_year_age_groups, levels = c("1-4 years", "5-14 years", "15-24 years", "25-34 years", "35-44 years", "45-54 years", "55-64 years", "65-74 years", "75-84 years", "85+ years")))
-
 
 ```
 
@@ -89,7 +84,7 @@ selectInput("variable_type", label = h3("Choose variable"),
 
 ```
 
-Column
+Column {.tabset}
 -----------------------------------------------------------------------
 
 ### US MAP
@@ -125,11 +120,14 @@ renderPlotly({
 	)
 })
 
-
-
 # rsconnect::deployApp("./zanis_shiny.Rmd")
 
 ```
+
+### Description
+
+The Crude Death Rate map allows users to toggle between different years (2000-2016), demonstrating the changes in variables over time and visualize regional differences across the U.S. The map includes visualization of distributions of the following variables: unemployment rate, crude rate, deaths, population, law strength (2016 only), smoking, disability, self reported health, drinking, leisure physical activities, overweight, poverty, diabetes, mental health, and sleep. The map demonstrates that there are significant changes over time in all variables.
+
 
 Death by Age and Race
 ===================================== 
@@ -141,8 +139,6 @@ Column {.sidebar}
 selectInput("year_2", label = h3("Choose year"),
 						choices = as.list(year), selected = 2013)
 ```
-
-
 
 Column {.tabset}
 -----------------------------------------------------------------------
@@ -180,38 +176,14 @@ renderPlotly({
 
 ```
 
-
-### Crude Firearm Death Rate Across All States by Age Group and Hispanic Origin
-
-```{r}
-renderPlotly({
-  age_hispanic <- add_hispanic %>% 
-  filter(year == input$year_2) %>% 
-	group_by(ten_year_age_groups, hispanic_origin) %>%
-	summarize(n_deaths = sum(deaths),
-						n_population = sum(population)) %>% 
-	mutate(crude_rate = (n_deaths/n_population) * 100000) %>% 
-  spread(key = hispanic_origin, value = crude_rate) %>%
-  janitor::clean_names() %>% 
-  plot_ly(x = ~ten_year_age_groups,
-  				y = ~not_hispanic_or_latino,
-  				name = "Not Hispanic or Latino",
-  				type = "bar") %>% 
-  	add_trace(y = ~hispanic_or_latino,
-  						name = "Hispanic or Latino") %>% 
-  	layout(barmode = "stack",
-  				 xaxis = list(title = "Age Groups"),
-  				 yaxis = list(title = "Crude Firearm Death Rate")
-  				 )
-
-})
-
-
-```
-
 ### Description
 
-(Fill description here)
+This barplot displays the distribution of firearm mortality deaths by age group and race. Visualizing a breakdown of mortality across different age groups and races is important to identify potential disparities in mortality and identify which groups should be the focus of public health interventions.
+
+The plot shows that distributions of deaths across age groups and races changes over time. In 2016, the 15-24 age group had the most firearm-related deaths, mostly concentrated in Black/African American group. Over time, white victims comprised a fairly steady number of deaths across all age groups. A comparison of 2000 versus 2016 reveals that deaths among "American Indian or Alaska Natives" have increased across all age groups. Death rates for Asian/Pacific Islanders have consistently been the lowest across all race groups.
+
+Note that "Hispanic origin" is considered a separate variable from "Race" in the Census data, and therefore was not included in this barchart. The Hispanic origin variable is assessed separately after Race is designated, and therefore individuals identifying as any of the race options included can also choose to select Hispanic/Latino origin. Therefore there is overlap between the two measures.
+
 
 
 
