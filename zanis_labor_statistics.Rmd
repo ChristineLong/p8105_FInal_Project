@@ -139,6 +139,10 @@ plot_geo(ssamatab1, locationmode = "USA-states") %>%
 
 ### unemployment data (State)
 
+First I tried data from Bureau of Labor Statistics website, but they either have only year 2017 or using Metropolitan Areas unemployment data which mix states.
+
+Then I switched to:
+
 https://fred.stlouisfed.org/search?st=unemployment+rate
 
 Unemployment data of 51 states (including District of Columbia) from 1976 to 2018 were downloaded and extracted from FRED economic research website. Tidy dataset was write into a "unempl.csv" file under "/zanis_dataset" folder.

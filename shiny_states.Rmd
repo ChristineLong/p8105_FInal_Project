@@ -17,31 +17,42 @@ library(tidyverse)
 
 # for us map
 merged_firearm_mortality <-
-	read_csv("./shiny_dataset/merged_firearm_mortality.csv") %>%
+	read_csv("./zanis_dataset/merged_firearm_mortality.csv") %>%
 	select(state_abb, year, crude_rate, deaths, population, law_strength) %>%
 	rename(state = state_abb) %>% 
 	unite(col = state_year, state, year, sep = "_")
 
-unempl <- read_csv("./shiny_dataset/unempl.csv") %>% 
+unempl <- read_csv("./zanis_dataset/unempl.csv") %>% 
 	unite(col = state_year, state, year, sep = "_")
 
-# merged_data <- full_join(x = gun_violence_merged, y = unempl, by = "state_year")
-merged_data <- full_join(x = unempl, y = merged_firearm_mortality, by = "state_year") %>%
-	separate(col = state_year, into = c("state", "year"), sep = "_") %>% 
-	gather(key = type_variable, value = Statistics, unemployment_rate:law_strength) %>% 
+cdi <- read_csv("./zanis_dataset/sel_cdi.csv") %>% 
+	unite(col = state_year, state, year, sep = "_")
+
+merged_data <- full_join(x = cdi, y = unempl, by = "state_year")
+merged_data <- full_join(x = merged_data, y = merged_firearm_mortality, by = "state_year") %>%
+	separate(col = state_year, into = c("state", "year"), sep = "_") %>%
+	gather(key = type_variable, value = Statistics, smoking:law_strength) %>% 
 	mutate(year = as.numeric(year), Statistics = round(Statistics, 3)) %>% 
-	arrange(year) %>% 
+	arrange(year) %>%
 	filter(!is.na(Statistics)) %>%
 	mutate(type_variable = recode(type_variable,
 																unemployment_rate = "Unemployment Rate",
 																crude_rate = "Crude Rate",
 																deaths = "Deaths",
 																population = "Population",
-																law_strength = "Law Strength (2016 only)"))
+																law_strength = "Law Strength (2016 only)",
+																smoking = "Smoking",
+																disability_65 = "Disability",
+																self_rated_health = "Self Reported Health",
+																drinking = "Drinking",
+																leisure_phys_act = "Leisure Physical Activities",
+																overweight = "Overweight",
+																diabetes = "Diabetes",
+																mental_health = "Mental Health",
+																sleep = "Sleep"))
 	
+# write_csv(merged_data, "./zanis_dataset/merged_data.csv")
 
-state_abb <- state.name
-names(state_abb) <- state.abb
 
 # for barplot
 firearm_mortality = read_csv("./devon_data/cdc_firearm_mortality_data.csv", na = "Unreliable") %>% 
@@ -69,7 +80,7 @@ selectInput("year_1", label = h3("Choose year"),
 						selected = 2015)
 
 selectInput("variable_type", label = h3("Choose variable"),
-						choices = type_variable, selected = "law_strength")
+						choices = type_variable, selected = "Law Strength (2016 only)")
 
 ```
 
@@ -79,9 +90,11 @@ Column
 ### US MAP
 
 ```{r}
+# for text
+state_abb <- state.name
+names(state_abb) <- state.abb
 
-
-
+# plot_geo
 renderPlotly({
 	geo1 <- list(
 	scope = "usa",
@@ -164,48 +177,5 @@ renderPlotly({
 ### Description
 
 (Fill description here)
-
-Page 3
-===================================== 
-
-Column
------------------------------------------------------------------------
-
-```{r}
-gun_spread <- merged_data %>%
-	filter(year == 2016) %>% 
-	spread(key = type_variable, value = Statistics) %>% 
-	janitor::clean_names() %>% 
-	filter(complete.cases(.)) %>% 
-	mutate(law_strength_2016_only = 51 - law_strength_2016_only)
-
-cr_law <- lm(data = gun_spread, formula = crude_rate ~ law_strength_2016_only)
-cr_unempl <- lm(data = gun_spread, formula = crude_rate ~ unemployment_rate)
-
-
-renderPlotly({
-	gun_spread %>% 
-	plot_ly() %>% 
-	add_markers(x = ~unemployment_rate, y = ~crude_rate) %>% 
-	add_lines(y = fitted(cr_unempl), x = ~unemployment_rate)
-
-})
-
-
-```
-
-Column
------------------------------------------------------------------------
-
-```{r}
-renderPlotly({
-	gun_spread %>% 
-	plot_ly() %>% 
-	add_markers(x = ~law_strength_2016_only, y = ~crude_rate) %>% 
-	add_lines(y = fitted(cr_law), x = ~law_strength_2016_only)
-
-})
-
-```
 
 

@@ -1,0 +1,151 @@
+---
+title: "Zanis Regression Report"
+author: 'Zanis Fang, UID: ZF2213'
+date: "12/3/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(PerformanceAnalytics)
+library(modelr)
+```
+
+### Correlation Matrix
+
+```{r correlation_table, message = FALSE, warning = FALSE}
+
+data_for_reg <- read_csv("./zanis_dataset/merged_data.csv") %>%
+	filter(year == 2016) %>% 
+	spread(key = type_variable, value = Statistics) %>% 
+	janitor::clean_names() %>% 
+	filter(complete.cases(.)) %>% 
+	mutate(law_strength_2016_only = 51 - law_strength_2016_only) %>% 
+	select(-state, -year, -deaths)
+
+chart.Correlation(data_for_reg)
+```
+
+*Comments:*
+
+Strong correlations can be seen among several pairs of variables. To minimize multi-collinearity, model should be selected carefully.
+
+
+### "Best" model at given number of variables
+
+```{r generate_models, results = FALSE}
+crude_rate_reg <- lm(data = data_for_reg, formula = crude_rate ~ .)
+stepwise_lm <- step(crude_rate_reg, direction = "backward")
+
+(criteria_reg <- leaps::regsubsets(crude_rate ~ ., data = data_for_reg) %>% summary())
+
+```
+
+```{r criteria_based}
+
+criteria_df <- as_tibble(criteria_reg$outmat) %>%
+	mutate("n_pred" = row_number()) %>%
+	select(n_pred, everything()) %>% 
+	t()
+
+colnames(criteria_df) <- c(1:8)
+criteria_df[-1, ] %>% knitr::kable()
+	
+	
+```
+
+*Comments:*
+
+
+
+
+### R square, BIC, Cp, Regression Sum of Squares, Residual Sum of Squares
+
+```{r model_selection}
+
+tibble(
+	n_pred = c(1:8),
+	"Adjusted R-square" = criteria_reg$adjr2,
+	"BIC" = criteria_reg$bic,
+	"Cp" = criteria_reg$cp,
+	"Regression Square Error" = criteria_reg$rsq,
+	"Residual Sum Square" = criteria_reg$rss
+	) %>%
+	gather(key = "Statistics", value = "value", 2:6) %>%
+	ggplot(aes(x = n_pred, y = value)) +
+	  geom_point() +
+	  geom_line() +
+	  facet_grid(Statistics ~ ., scales = "free_y") +
+	  labs(
+	  	x = "Number of Predictors",
+	  	y = "Values",
+	  	title = "Model selection"
+	  )
+```
+
+### Two selected models
+
+**Model from stepwise:**
+
+```{r stepwise}
+summary(stepwise_lm) %>% broom::tidy() %>% knitr::kable()
+
+
+```
+
+**Criteria based model:**
+
+```{r criteria}
+
+criteria_lm <- lm(data = data_for_reg, formula = crude_rate ~ disability +
+										law_strength_2016_only + smoking + unemployment_rate)
+summary(criteria_lm) %>% broom::tidy() %>% knitr::kable()
+```
+
+### Model diagnostics
+
+```{r model_diagnostics}
+par(mfrow = c(2,5))
+MASS::boxcox(criteria_lm)
+plot(criteria_lm)
+MASS::boxcox(stepwise_lm)
+plot(stepwise_lm)
+```
+
+*Comments:*
+No strong bias observed.
+
+### Cross validation
+
+```{r crossvalidation}
+
+
+crossv_mc(data_for_reg, 100) %>% 
+	mutate(train = map(train, as_tibble),
+				 test = map(test, as_tibble)) %>%
+	mutate(stpws_mdl = map(train, ~lm(crude_rate ~ drinking +
+																			law_strength_2016_only +
+																			leisure_physical_activities +
+																			self_reported_health +
+																			smoking +
+																			unemployment_rate,
+																		data = .x)),
+				 triv_mdl = map(train, ~lm(crude_rate ~ 1,
+																		data = .x)),
+				 crt_mdl = map(train, ~lm(crude_rate ~ disability +
+				 												 	law_strength_2016_only +
+				 												 	smoking +
+				 												 	unemployment_rate,
+				 												 data = .x))) %>% 
+	mutate(rmse_stpws = map2_dbl(stpws_mdl, test, ~rmse(model = .x, data = .y)),
+				 rmse_triv = map2_dbl(triv_mdl, test, ~rmse(model = .x, data = .y)),
+				 rmse_crt   = map2_dbl(crt_mdl, test, ~rmse(model = .x, data = .y))) %>% 
+	select(starts_with("rmse")) %>%
+	gather(key = model, value = rmse) %>% 
+	ggplot(aes(x = model, y = rmse)) +
+	  geom_violin()
+
+
+```
+

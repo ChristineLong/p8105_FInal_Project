@@ -9,10 +9,12 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### Exploratory analysis, not for formal dataset
+
 ```{r}
 
 library(tidyverse)
-gun_violence <- read_csv(list.files("./dataset", full.names = TRUE)[2])
+gun_violence <- read_csv("./zanis_dataset/gun-violence-data_01-2013_03-2018.csv")
 
 state_abb <- state.abb
 names(state_abb) <- state.name
@@ -24,10 +26,7 @@ gun_violence_tidy <- gun_violence %>%
 				 state = ifelse(is.na(state), "DC", state)) %>% 
 	select(-date)
 	
-
 # write_csv(x = gun_violence_tidy, path = "./shiny_dataset/gun_violence_tidy.csv")
-
-
 
 ```
 
@@ -38,20 +37,20 @@ library(tidyverse)
 # fixed width dataframe
 
 merged_firearm_mortality <-
-	read_csv("./shiny_dataset/merged_firearm_mortality.csv") %>%
+	read_csv("./zanis_dataset/merged_firearm_mortality.csv") %>%
 	select(state_abb, year, crude_rate, deaths, population, law_strength) %>%
 	rename(state = state_abb) %>% 
 	unite(col = state_year, state, year, sep = "_")
 
-gun_violence <- read_csv("./shiny_dataset/gun_violence_tidy.csv") %>% 
+gun_violence <- read_csv("./zanis_dataset/gun_violence_tidy.csv") %>% 
 	sample_n(size = 25000)
 
-gun_violence_merged <- read_csv("./shiny_dataset/gun_violence_tidy.csv") %>%
+gun_violence_merged <- read_csv("./zanis_dataset/gun_violence_tidy.csv") %>%
 	group_by(state, year) %>%
 	summarize(total_killed = n(), total_injured = n()) %>% 
 	unite(col = state_year, state, year, sep = "_")
 
-unempl <- read_csv("./shiny_dataset/unempl.csv") %>% 
+unempl <- read_csv("./zanis_dataset/unempl.csv") %>% 
 	unite(col = state_year, state, year, sep = "_")
 
 merged_data <- full_join(x = gun_violence_merged, y = unempl, by = "state_year")
@@ -91,6 +90,8 @@ gun_2016 %>% plot_ly() %>%
 	add_markers(x = ~unemployment_rate, y = ~crude_rate, z = ~law_strength) %>% 
 	add_lines(x = ~unemployment_rate, y = fitted(gun_2016_lm), z = ~law_strength)
 
+
+
 ```
 
 *Comments:*
@@ -99,4 +100,9 @@ gun_2016 %>% plot_ly() %>%
 2. For 2014 to 2016, CDC data seems to be a subset of Gun Violence dataset.
 
 
+### hispanic
+
+```{r}
+add_hispanic <- read_delim("./data/Firearm Mortality_Hispanic.txt", delim = "\t") %>% janitor::clean_names()
+```
 

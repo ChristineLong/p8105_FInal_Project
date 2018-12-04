@@ -2,7 +2,7 @@
 title: "CDI"
 author: 'Zanis Fang, UID: ZF2213'
 date: "11/5/2018"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -26,8 +26,8 @@ list_quest <- c(
 "Disability among adults aged >= 65 years")
 
 
-cdi_file <- list.files("./dataset/", full.names = TRUE)
-cdi_raw <- read_csv(cdi_file[6])
+
+cdi_raw <- read_csv("./zanis_dataset/U.S._Chronic_Disease_Indicators__CDI_.csv")
 cdi <- cdi_raw %>%
 	# filter(Topic == "Mental Health", DataValueType == "Age-adjusted Mean") %>%
 	separate(GeoLocation, into = c("latitude", "longititude"), sep = ",") %>%
@@ -36,18 +36,18 @@ cdi <- cdi_raw %>%
 				 latitude = as.numeric(latitude),
 				 longititude = as.numeric(longititude)
 	) %>% 
-	filter(Question %in% list_quest) %>% 
+	filter(Question %in% list_quest) %>%
 	filter(LocationAbbr != "US",
 				 YearStart != 2010,
 				 Stratification1 == "Overall",
 				 DataValueType %in% c("Crude Prevalence", "Mean")) %>%
-	select(YearStart:DataValue, -DataSource, -Response, -DatavalueFootnote, -DataValueFootnoteSymbol, -YearEnd) %>%
+	select(YearStart:DataValue, -DataSource, -Response, -DatavalueFootnote, -DataValueFootnoteSymbol, -YearEnd, -LocationDesc) %>%
 	select(-Topic, -DataValueUnit, -DataValueType) %>% 
 	spread(key = Question, value = DataValue)
 
-cdi %>% View	
-colnames(cdi) <- c("year", "state", "state_name", "smoking", "disability_65", "self_rated_health", "drinking", "leisure_phys_act", "overweight", "poverty", "diabetes", "sleep", "mental_health")
+colnames(cdi) <- c("year", "state", "smoking", "disability_65", "self_rated_health", "drinking", "leisure_phys_act", "overweight", "poverty", "diabetes", "sleep", "mental_health")
 
+# write_csv(cdi, "./zanis_dataset/sel_cdi.csv")
 
 ```
 
