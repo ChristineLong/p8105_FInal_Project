@@ -1,30 +1,94 @@
 ---
-title: "Intro Page"
-author: "Eileen Shea"
-date: "12/1/2018"
+title: "Gun Violence in the United States"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  fig.width = 7
+)
+
+library(tidyverse)
+library(plotly)
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
 ```
 
-## R Markdown
+```{r, include=FALSE}
+gun_violence_data = read_csv("./gun_violence_data/gun_violence_data_2013_2018.csv")
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+gun_v_tidy = 
+	gun_violence_data %>% 
+	select(date:city_or_county, n_killed, n_injured, latitude, longitude) %>% 
+	separate(date, into = c("year", "month", "day"), sep = "-") %>% 
+	mutate(n_affected = n_killed + n_injured) %>%
+	filter(n_affected > 0) %>% 
+	mutate(mass_shooting = ifelse(n_affected >= 4, "Yes", "No"))
 ```
 
-## Including Plots
+### Gun Violence as a Paramount Public Health Problem
 
-You can also embed plots, for example:
++ The [American Public Health Association (APHA)](https://www.apha.org/topics-and-issues/gun-violence) states that gun violence "is a leading cause of premature death in the U.S." More than 38,000 individuals are killed by guns each year, and another 85,000 are injured.
++ Already in 2018, the [Gun Violence Archive](https://www.gunviolencearchive.org) has reported 52,422 gun violence incidents in the United States; 325 of these incidents were mass shootings.
++ Since 1996, the [Dickey Amendment](https://en.wikipedia.org/wiki/Dickey_Amendment) has acted as a de facto ban on gun violence research by the [Centers for Disease Control and Prevention (CDC)](https://www.cdc.gov). 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+### The United States as a Product of Gun Violence...
+
+Gun violence has drastically shaped our attitudes and our political climate. The pervasive nature of gun violence in contemporary America is evinced by a map that is entirely constructed of gun violence incident points. ***Hover over map points to get incident information.***
+
+```{r, echo=FALSE}
+gun_v_tidy %>%
+	filter(state != "Alaska", state != "Hawaii", longitude < 0) %>% 
+	mutate(n_affected_cat = ifelse(n_affected %in% 4:9, 2,
+													ifelse(n_affected %in% 10:19, 3,
+													ifelse(n_affected %in% 20:34, 4,
+													ifelse(n_affected %in% 35:49, 5,
+													ifelse(n_affected > 50, 6, 1)))))) %>% 
+	mutate(n_affected_cat = as.factor(n_affected_cat),
+				 n_affected_cat = recode_factor(n_affected_cat, `1` = "1-3 affected", `2` = "4-9 affected", `3` = "10-19 affected", `4` = "20-34 affected", `5` = "35-49 affected", `6` = "50+ affected"),
+				 city_state = str_c(city_or_county, state, sep = ", "), 
+				 text_label = str_c(city_state, '\n', year,'\nKilled: ', n_killed, '\nInjured: ', n_injured)) %>% 
+  plot_ly(x = ~longitude, y = ~latitude, type = "scatter", mode = "markers",
+          alpha = 0.5, 
+          color = ~n_affected_cat,
+  				colors = "Accent",
+  				text = ~text_label) %>% 
+	layout(legend = list(x = 0.8, y = 0.1))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Who Should Care About Gun Violence?
+
+**Anybody!**
+
++ Gun violence requires people, with population dense states experiencing a greater number of gun violence incidents as seen in the map above.
++ However, even the least populated states still have notable gun violence concerns.
++ The "lethality proportion" is defined as the proportion of those affected by a gun violence incident who are killed in that given gun violence incident; it gets at how deadly a given incident was.
++ Wyoming is the *least densely populated* state in the continental United States, but it hast the *highest lethality proportion* for gun violence incidents. 
++ Other states that follow this low population density ~ high lethality proportion paradigm are Idaho, Montana, Alaska, and Nevada.
++ A possible reason for this paradigm is that lack of population density leads to a lower density of healthcare infrastucture, which then leads to isolation during emergencies. 
+
+The plot below shows the national average for the lethality proportion as a dotted line. 
+
+```{r, include=FALSE}
+prop_data = 
+	gun_v_tidy %>% 
+	mutate(prop_killed = n_killed / (n_killed + n_injured))
+
+prop_data %>% 
+	summarize(mean = mean(prop_killed))
+```
+
+```{r, echo=FALSE}
+prop_data %>% 
+	group_by(state) %>% 
+	summarize(mean_prop = mean(prop_killed)) %>% 
+	mutate(state = forcats::fct_reorder(state, mean_prop)) %>% 
+	ggplot(aes(x = state, y = mean_prop)) +
+	geom_point() +
+	geom_abline(slope = 0, intercept = 0.346, color = "purple", linetype = "dashed") +
+	theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 6)) +
+	labs(
+    x = " ",
+    y = "Lethality Proportion"
+  ) 
+```
