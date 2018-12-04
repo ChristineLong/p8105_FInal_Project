@@ -1,5 +1,5 @@
 ---
-title: "Zanis Regression Report"
+title: "Crude Death Rate Prediction Using Economic, Law and Health Predictors"
 author: 'Zanis Fang, UID: ZF2213'
 date: "12/3/2018"
 output: html_document
@@ -31,6 +31,8 @@ chart.Correlation(data_for_reg)
 
 Strong correlations can be seen among several pairs of variables. To minimize multi-collinearity, model should be selected carefully.
 
+Most of the variates follows approximately normal distribution.
+
 
 ### "Best" model at given number of variables
 
@@ -57,7 +59,7 @@ criteria_df[-1, ] %>% knitr::kable()
 
 *Comments:*
 
-
+It seems that "Law Strength", "Smoking", "Disability", "Unemployment Rate" are strong predictors. "Leisure Physical Activities" appears in large models.
 
 
 ### R square, BIC, Cp, Regression Sum of Squares, Residual Sum of Squares
@@ -84,15 +86,23 @@ tibble(
 	  )
 ```
 
+*Comments:*
+
+Model with four predictors seems to have highest adjusted R square, lowest BIC and Cp, and is among the highest regression mean sum of squares and among the lowest residual mean sum of squares. Six-predictor model has similar parameters with four-predictor model except for the higher BIC than four-predictor model.
+
 ### Two selected models
 
 **Model from stepwise:**
 
 ```{r stepwise}
 summary(stepwise_lm) %>% broom::tidy() %>% knitr::kable()
-
+summary(stepwise_lm) %>% broom::glance() %>% knitr::kable()
 
 ```
+
+*Comments:*
+
+Drinking, law strength, leisure seem to negatively associate with the firearm crude death rate. Self-rated health, smoking and unemployment rate positively associate with crude death rate.
 
 **Criteria based model:**
 
@@ -101,7 +111,12 @@ summary(stepwise_lm) %>% broom::tidy() %>% knitr::kable()
 criteria_lm <- lm(data = data_for_reg, formula = crude_rate ~ disability +
 										law_strength_2016_only + smoking + unemployment_rate)
 summary(criteria_lm) %>% broom::tidy() %>% knitr::kable()
+summary(criteria_lm) %>% broom::glance() %>% knitr::kable()
 ```
+
+*Comments:*
+
+Disability, smoking, unemployment rate positively associate with the firearm crude death rate. Law strength negatively associate with crude death rate.
 
 ### Model diagnostics
 
@@ -114,7 +129,7 @@ plot(stepwise_lm)
 ```
 
 *Comments:*
-No strong bias observed.
+For both models, no severe outliers observed. Residuals seem to follow normal distribution. Box-cox transformation show that no transformation of crude death rate is necessary in both models. Residuals don't hold constant over fitted values, but still around zero and not severely biased.
 
 ### Cross validation
 
@@ -149,3 +164,6 @@ crossv_mc(data_for_reg, 100) %>%
 
 ```
 
+*Comments:*
+
+Four-predictor model seems to have slightly lower root mean square errors than six-predictor model. They are both better than a trivival model y ~ 1. We would choose four-predictor model.
