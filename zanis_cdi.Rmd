@@ -25,9 +25,11 @@ list_quest <- c(
 "Heavy drinking among adults aged >= 18 years",
 "Disability among adults aged >= 65 years")
 
+download.file("https://chronicdata.cdc.gov/views/g4ie-h725/rows.csv?accessType=DOWNLOAD",
+							"./data/U.S._Chronic_Disease_Indicators__CDI_.csv")
 
 
-cdi_raw <- read_csv("./zanis_dataset/U.S._Chronic_Disease_Indicators__CDI_.csv")
+cdi_raw <- read_csv("./data/U.S._Chronic_Disease_Indicators__CDI_.csv")
 cdi <- cdi_raw %>%
 	# filter(Topic == "Mental Health", DataValueType == "Age-adjusted Mean") %>%
 	separate(GeoLocation, into = c("latitude", "longititude"), sep = ",") %>%
@@ -47,7 +49,7 @@ cdi <- cdi_raw %>%
 
 colnames(cdi) <- c("year", "state", "smoking", "disability_65", "self_rated_health", "drinking", "leisure_phys_act", "overweight", "poverty", "diabetes", "sleep", "mental_health")
 
-# write_csv(cdi, "./zanis_dataset/sel_cdi.csv")
+# write_csv(cdi, "./data/sel_cdi.csv")
 
 ```
 

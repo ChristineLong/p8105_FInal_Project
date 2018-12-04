@@ -12,6 +12,9 @@ library(PerformanceAnalytics)
 library(modelr)
 ```
 
+Methods: Data from several sources were joined together into a merged dataset. We use 2016 year to build the model. Main outcome is crude death rate for each state, candidate predictors are law strength, unemployment rate, sleep time, smoking, self-reported health, overweight, population, poverty, mental health, leisure physical activity, drinking, disability and diabetes for each state. Two models were generated using criteria-based model selection and stepwise regression. Models were compared by BIC, adjusted R square, Cp, etc. Models were examined by distribution of residuals (QQ plot, residuals vs fitted value), outliers. We also used cross-validation to compare the two models.
+
+
 ### Correlation Matrix
 
 ```{r correlation_table, message = FALSE, warning = FALSE}
@@ -167,3 +170,9 @@ crossv_mc(data_for_reg, 100) %>%
 *Comments:*
 
 Four-predictor model seems to have slightly lower root mean square errors than six-predictor model. They are both better than a trivival model y ~ 1. We would choose four-predictor model.
+
+
+### Conclusion
+
+Four-predictor model (disability, smoking, unemployment rate, law strength) seems to perform a little better than six-predictor model (drinking, law strength, leisure, self-rated health, smoking and unemployment rate). Model diagnosis shows that the residuals of both models agree with the underlying assumption.
+

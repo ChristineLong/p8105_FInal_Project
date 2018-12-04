@@ -48,6 +48,7 @@ merged_data <- full_join(x = merged_data, y = merged_firearm_mortality, by = "st
 																leisure_phys_act = "Leisure Physical Activities",
 																overweight = "Overweight",
 																diabetes = "Diabetes",
+																poverty = "Poverty",
 																mental_health = "Mental Health",
 																sleep = "Sleep"))
 	
@@ -67,7 +68,7 @@ add_hispanic <- read_delim("./data/Firearm Mortality_Hispanic.txt", delim = "\t"
 
 ```
 
-Page 1
+Crude Death Rate Map
 ===================================== 
 
 Column {.sidebar}
@@ -126,11 +127,11 @@ renderPlotly({
 
 
 
-# rsconnect::deployApp("./shiny_states.Rmd")
+# rsconnect::deployApp("./zanis_shiny.Rmd")
 
 ```
 
-Page 2
+Death by Age and Race
 ===================================== 
 
 Column {.sidebar}
@@ -143,7 +144,7 @@ selectInput("year_2", label = h3("Choose year"),
 
 
 
-Row
+Column {.tabset}
 -----------------------------------------------------------------------
 
 ### Crude Firearm Death Rate Across All States by Age Group and Race
@@ -163,12 +164,13 @@ renderPlotly({
   				y = ~white,
   				name = "White",
   				type = "bar") %>% 
-  	add_trace(y = ~american_indian_or_alaska_native,
-  						name = "American Indian or Alaska Native") %>% 
+  	add_trace(y = ~black_or_african_american,
+  						name = "Black or African American") %>%
   	add_trace(y = ~asian_or_pacific_islander,
   						name = "Asian or Pacific Islander") %>% 
   	add_trace(y = ~american_indian_or_alaska_native,
   						name = "American Indian or Alaska Native") %>% 
+ 
   	layout(barmode = "stack",
   				 xaxis = list(title = "Age Groups"),
   				 yaxis = list(title = "Crude Firearm Death Rate")
@@ -178,8 +180,6 @@ renderPlotly({
 
 ```
 
-Row
------------------------------------------------------------------------
 
 ### Crude Firearm Death Rate Across All States by Age Group and Hispanic Origin
 
@@ -209,13 +209,9 @@ renderPlotly({
 
 ```
 
-
-
-Row
------------------------------------------------------------------------
-
 ### Description
 
 (Fill description here)
+
 
 
