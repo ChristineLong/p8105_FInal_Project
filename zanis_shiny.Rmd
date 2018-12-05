@@ -15,7 +15,17 @@ library(plotly)
 library(tidyverse)
 
 # read merged data
-merged_data <- read_csv("./data/merged_data.csv")
+merged_data <- read_csv("./data/merged_data.csv") %>%
+	filter(year > 2000, year < 2017) %>%
+	# fill NAs with data from year 2013
+	mutate(year = paste("year", year, sep = "_")) %>%
+	spread(key = year, value = Statistics) %>%
+	gather(key = selected_years, value = to_fill, year_2001:year_2012, year_2015) %>%
+	mutate(to_fill = if_else(is.na(to_fill), year_2016, to_fill)) %>%
+	spread(key = selected_years, value = to_fill) %>% 
+	gather(key = year, value = Statistics, year_2013:year_2015) %>%
+	mutate(year = as.numeric(str_extract(year, "[0-9]{4}")))
+
 
 # for barplot
 firearm_mortality = read_csv("./devon_data/cdc_firearm_mortality_data.csv", na = "Unreliable") %>% 
@@ -37,7 +47,7 @@ Column {.sidebar}
 
 # entries to select from
 type_variable <- (merged_data %>% distinct(type_variable) %>% pull())
-year <- c(2000:2016)
+year <- c(2001:2016)
 
 # year select box 
 selectInput("year_1", label = h3("Choose year"),
@@ -47,8 +57,11 @@ selectInput("year_1", label = h3("Choose year"),
 # law strength select box
 selectInput("variable_type", label = h3("Choose variable"),
 						choices = type_variable, selected = "Law Strength (2016 only)")
-
 ```
+
+<br>
+
+(See description page for more information.)
 
 Column {.tabset}
 -----------------------------------------------------------------------
@@ -96,6 +109,32 @@ renderPlotly({
 ### Description
 
 The Crude Death Rate map allows users to toggle between different years (2000-2016), demonstrating the changes in variables over time and visualize regional differences across the U.S. The map includes visualization of distributions of the following variables: unemployment rate, crude rate, deaths, population, law strength (2016 only), smoking, disability, self reported health, drinking, leisure physical activities, overweight, poverty, diabetes, mental health, and sleep. The map demonstrates that there are significant changes over time in all variables.
+
+**Crude Rate:**
+Firearm Mortality Rate (number of deaths per million), 2001-2016.
+
+**Death:**
+Number of firearm caused deaths each state each year, 2001-2016.
+
+**Sleep:**
+Darker means better sleep quality, 2013, 2014, 2016.
+
+**Mental Health:**
+The darker the worse mental healthness, 2011-2016.
+
+**Leisure Physical Activities:**
+The darker the longer leisure activities, 2011-2016.
+
+**Self Reported Health:**
+The darker the better self-rated health, 2011-2016.
+
+**Law Strength:**
+The darker the higher law strength, 2016 only.
+
+**Other variables:** The darker the higher in number / higher in rate / more severe in conditions, 2011-2016.
+
+**All missing values are filled with data from year 2016.**
+
 
 
 Death by Age and Race
