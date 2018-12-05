@@ -7,166 +7,52 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+# loading necessary packages
 library(tidyverse)
-library(usmap)
-library(rsconnect)
 
 ```
 
 
-```{r}
-# download the file if not exist
-if (!file.exists("./dataset/ssamatab1.txt")) {
-	download.file("https://www.bls.gov/web/metro/ssamatab1.txt",
-								destfile = "./dataset/ssamatab1.txt")
-}
-	
-# get file name
-ssamatab1_file <- "./dataset/ssamatab1.txt"
+### Unemployment Data (State)
 
-# get colname rows
-ssamatab1_colname <- read_lines(ssamatab1_file, skip = 3, n_max = 1)
-# parse column name, words linked by single space, if not, words without space
-ssamatab1_colname <-
-	str_extract_all(ssamatab1_colname, "([\\S]+[\\s][\\S]+)|[\\S]+") %>%
-	unlist()
+**Description:**
 
+Monthly unemployment data of 51 states (including District of Columbia) from 1976 to 2018 were downloaded and extracted from [FRED economic research](https://fred.stlouisfed.org/search?st=unemployment+rate). Each dataset describe percentage of unemployment in each state, not seasonally adjusted.
 
-# fixed width dataframe
-ssamatab1 <- read_delim("./dataset/ssamatab1.txt",
-												delim = "[ ]",
-												col_names = "raw",
-												skip = 5) %>%
-	# filtered out footnote
-	filter(str_detect(raw, "MT[0-9]+[\\s]")) %>%
-	# separate into columns
-	separate(raw, into = ssamatab1_colname, sep = "[\\s]{2,}") %>% 
-	# clean column names
-	janitor::clean_names() %>%
-	rename(fips = code_2) %>% 
-	separate(area, into = c("county", "state_source"), sep = ",") %>%
-	separate(county,
-					 into = paste("county", 1:4, sep = "_"),
-					 sep = "-+") %>%
-	separate(state_source,
-					 into = c("unknown", "state", "source1", "source2"),
-					 sep = " ") %>% 
-	select(-c("unknown", "source1", "source2")) %>% 
-	mutate(rate = as.numeric(rate),
-				 fips = as.numeric(fips),
-				 year = as.numeric(year)) %>% 
-	mutate(employment = as.numeric(str_remove(employment, ","))) %>% 
-	mutate(unemployment = as.numeric(str_remove(unemployment, ","))) %>%
-	group_by(state, year) %>%
-	summarize(unemployment_rate = sum(unemployment) / sum(unemployment * 100 / rate),
-						total_unemployment = sum(unemployment)) %>%
-	filter(str_length(state) != 2) %>% View
-	gather(key = "type_variable", value = "value", unemployment_rate:total_unemployment)
+**Cleaning:**
 
-# write_csv(path = "./shiny_dataset/tidy_ssamatab1.csv", x = ssamatab1)
+51 states were joined according to the date of unemployment rate. These datasets using four letter state abbreviations. Extract first two letters in order to compatible with other datasets. Year variable is extracted from the date variable. Yearly unemployment rates were averaged across months under the assumption that the population for each state holds constant. Tidy dataset was wrote into a "unempl.csv" for downstream analysis.
 
 
 
-
-	
-usmap::plot_usmap(data = data.frame(
-	ssamatab1 %>%
-		filter(year == "2016", month == "01") %>% 
-		select(state, rate)),
-	values = "rate") +
-	scale_fill_continuous(low = "white", high = "red")
-
-
-# take a look at unemployment rate of New York-Newark_Jersey area
-ssamatab1 %>%
-	filter(state == "NY") %>%
-	group_by(fips, year) %>%
-	summarize(mean_rate = mean(rate)) %>%
-  ggplot(aes(y = mean_rate, x = year, group = fips, color = fips)) +
-	  geom_point(show.legend = FALSE) +
-	  geom_line(show.legend = FALSE) +
-	  labs(
-	    title = "Mean unemployment rate for each area",
-	    x = "Year",
-	    y = "Mean Unemployment rate",
-	    color = "Area"
-	  ) +
-	  theme(
-	  	axis.text.x = element_text(angle = 60)
-	  )
-
-```
-
-
-### Try plotly
 
 ```{r}
-library(plotly)
-	
-geo1 <- list(
-	scope = "usa",
-	projection = list(type = "state"),
-	showlakes = TRUE,
-	lakecolor = toRGB("white")
-)
-
-g2 <- list(
-	scope = "usa",
-	projection = list(type = "state"),
-	showlakes = TRUE,
-	lakecolor = toRGB("white")
-)
-
-plot_geo(ssamatab1, locationmode = "USA-states") %>% 
-	add_trace(
-		z = ~state_unemployment,
-		locations = ~state,
-		color = ~state_unemployment,
-		colors = "Reds") %>%
-	add_markers(
-		y = 12,
-		x = 12,
-		locations = ~state,
-		size = ~unemployment,
-		colors = "Blues",
-		geo = "geo2"
-	) %>%
-	layout(
-		geo = geo1, geo2 = g2
-	)
-
-```
-
-### unemployment data (State)
-
-First I tried data from Bureau of Labor Statistics website, but they either have only year 2017 or using Metropolitan Areas unemployment data which mix states.
-
-Then I switched to:
-
-https://fred.stlouisfed.org/search?st=unemployment+rate
-
-Unemployment data of 51 states (including District of Columbia) from 1976 to 2018 were downloaded and extracted from FRED economic research website. Tidy dataset was write into a "unempl.csv" file under "/zanis_dataset" folder.
-
-```{r}
-
+# read all files
 unempl_files <-
 	tibble(state = list.files("./zanis_dataset/unemployment", full.names = TRUE)) %>%
 	mutate(data = map(.x = state, .f = ~read_csv(.x))) %>%
 	mutate(state = str_extract(state, "[A-Z]{4}"))
 
+# join according to date
 unempl <- unempl_files$data[[1]]
 for (i in 2:nrow(unempl_files)) {
 	unempl <- full_join(unempl, unempl_files$data[[i]], by = "DATE")
 }
 
+# get state abbreviations
 unempl <- unempl %>% 
 	gather(key = state, value = unemployment_rate, AKUR:WYUR) %>% 
 	mutate(state = str_extract(state, "^[A-Z]{2}")) %>%
 	mutate(year = lubridate::year(DATE)) %>% 
 	group_by(state, year) %>% 
+	# assuming the population hold constant acrossing the whole
 	summarize(unemployment_rate = mean(unemployment_rate))
-	
-# write_csv(x = unempl, path = "./zanis_dataset/unempl.csv")
+
+# write files if hasn't done yet
+if (!file.exists("./zanis_dataset/unempl.csv")) {	
+write_csv(x = unempl, path = "./zanis_dataset/unempl.csv")
+}
+
 ```
 
 

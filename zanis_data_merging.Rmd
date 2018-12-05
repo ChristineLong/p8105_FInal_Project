@@ -1,0 +1,59 @@
+---
+title: "Zanis_data_merging"
+author: 'Zanis Fang, UID: ZF2213'
+date: "12/4/2018"
+output: html_document
+---
+
+**Data cleaning:**
+
+Read cleaned firearm mortality dataset with law strength, cdi dataset, unemployment dataset. For each dataset, state and year were joined into state-year columns. Three datasets were joined according to state-year column and then separate back to state and year columns. Variables were then stacked into long table and remove entries with NAs, variable names were recoded to make more readable. Merged dataset was written into a merged .csv file. 
+
+```{r setup, include=FALSE}
+library(tidyverse)
+
+# for us map
+merged_firearm_mortality <-
+	read_csv("./zanis_dataset/merged_firearm_mortality.csv") %>%
+	select(state_abb, year, crude_rate, deaths, population, law_strength) %>%
+	rename(state = state_abb) %>% 
+	unite(col = state_year, state, year, sep = "_")
+
+unempl <- read_csv("./zanis_dataset/unempl.csv") %>% 
+	unite(col = state_year, state, year, sep = "_")
+
+cdi <- read_csv("./zanis_dataset/sel_cdi.csv") %>% 
+	unite(col = state_year, state, year, sep = "_")
+
+merged_data <- full_join(x = cdi, y = unempl, by = "state_year")
+merged_data <- full_join(x = merged_data, y = merged_firearm_mortality, by = "state_year") %>%
+	separate(col = state_year, into = c("state", "year"), sep = "_") %>%
+	gather(key = type_variable, value = Statistics, smoking:law_strength) %>% 
+	mutate(year = as.numeric(year), Statistics = round(Statistics, 3)) %>% 
+	arrange(year) %>%
+	filter(!is.na(Statistics)) %>%
+	mutate(type_variable = recode(type_variable,
+																unemployment_rate = "Unemployment Rate",
+																crude_rate = "Crude Rate",
+																deaths = "Deaths",
+																population = "Population",
+																law_strength = "Law Strength (2016 only)",
+																smoking = "Smoking",
+																disability_65 = "Disability",
+																self_rated_health = "Self Reported Health",
+																drinking = "Drinking",
+																leisure_phys_act = "Leisure Physical Activities",
+																overweight = "Overweight",
+																diabetes = "Diabetes",
+																poverty = "Poverty",
+																mental_health = "Mental Health",
+																sleep = "Sleep"))
+
+# write merged data
+if (!file.exists("./data/merged_data.csv")) {
+	write_csv(merged_data, "./data/merged_data.csv")
+}
+
+
+
+```

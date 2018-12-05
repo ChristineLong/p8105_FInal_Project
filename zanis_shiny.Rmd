@@ -14,45 +14,8 @@ library(shiny)
 library(plotly)
 library(tidyverse)
 
-
-# for us map
-merged_firearm_mortality <-
-	read_csv("./zanis_dataset/merged_firearm_mortality.csv") %>%
-	select(state_abb, year, crude_rate, deaths, population, law_strength) %>%
-	rename(state = state_abb) %>% 
-	unite(col = state_year, state, year, sep = "_")
-
-unempl <- read_csv("./zanis_dataset/unempl.csv") %>% 
-	unite(col = state_year, state, year, sep = "_")
-
-cdi <- read_csv("./zanis_dataset/sel_cdi.csv") %>% 
-	unite(col = state_year, state, year, sep = "_")
-
-merged_data <- full_join(x = cdi, y = unempl, by = "state_year")
-merged_data <- full_join(x = merged_data, y = merged_firearm_mortality, by = "state_year") %>%
-	separate(col = state_year, into = c("state", "year"), sep = "_") %>%
-	gather(key = type_variable, value = Statistics, smoking:law_strength) %>% 
-	mutate(year = as.numeric(year), Statistics = round(Statistics, 3)) %>% 
-	arrange(year) %>%
-	filter(!is.na(Statistics)) %>%
-	mutate(type_variable = recode(type_variable,
-																unemployment_rate = "Unemployment Rate",
-																crude_rate = "Crude Rate",
-																deaths = "Deaths",
-																population = "Population",
-																law_strength = "Law Strength (2016 only)",
-																smoking = "Smoking",
-																disability_65 = "Disability",
-																self_rated_health = "Self Reported Health",
-																drinking = "Drinking",
-																leisure_phys_act = "Leisure Physical Activities",
-																overweight = "Overweight",
-																diabetes = "Diabetes",
-																poverty = "Poverty",
-																mental_health = "Mental Health",
-																sleep = "Sleep"))
-	
-# write_csv(merged_data, "./zanis_dataset/merged_data.csv")
+# read merged data
+merged_data <- read_csv("./data/merged_data.csv")
 
 # for barplot
 firearm_mortality = read_csv("./devon_data/cdc_firearm_mortality_data.csv", na = "Unreliable") %>% 
@@ -70,15 +33,18 @@ Column {.sidebar}
 -----------------------------------------------------------------------
 
 
-```{r}
+```{r for_sidebar}
 
+# entries to select from
 type_variable <- (merged_data %>% distinct(type_variable) %>% pull())
 year <- c(2000:2016)
 
+# year select box 
 selectInput("year_1", label = h3("Choose year"),
 						choices = as.list(year),
 						selected = 2015)
 
+# law strength select box
 selectInput("variable_type", label = h3("Choose variable"),
 						choices = type_variable, selected = "Law Strength (2016 only)")
 
@@ -89,13 +55,14 @@ Column {.tabset}
 
 ### US MAP
 
-```{r}
-# for text
+```{r us_map}
+# for convert state abbreviations to state names
 state_abb <- state.name
 names(state_abb) <- state.abb
 
 # plot_geo
 renderPlotly({
+	# map plot setting
 	geo1 <- list(
 	scope = "usa",
 	projection = list(type = "state"),
@@ -103,6 +70,7 @@ renderPlotly({
 	lakecolor = toRGB("white")
 	)
 	
+	# display value using color intensity
 	merged_data %>% 
 	filter(type_variable == input$variable_type, year == input$year_1) %>% 
 	plot_geo(locationmode = "USA-states") %>% 
@@ -111,6 +79,7 @@ renderPlotly({
 		locations = ~state,
 		color = ~Statistics,
 		colors = "Reds",
+		# add text
 		text = ~paste(type_variable, state_abb[state], sep = "<br />")
 		) %>%
 	layout(
@@ -135,7 +104,8 @@ Death by Age and Race
 Column {.sidebar}
 -----------------------------------------------------------------------
 
-```{r}
+```{r for_sidebar_2}
+# years to choose from
 selectInput("year_2", label = h3("Choose year"),
 						choices = as.list(year), selected = 2013)
 ```
@@ -145,28 +115,32 @@ Column {.tabset}
 
 ### Crude Firearm Death Rate Across All States by Age Group and Race
 
-```{r}
+```{r barplot_age_race}
 
+# plot barplot
 renderPlotly({
   age_race <- firearm_mortality %>% 
   filter(year == input$year_2) %>% 
 	group_by(ten_year_age_groups, race) %>%
 	summarize(n_deaths = sum(deaths),
 						n_population = sum(population)) %>% 
+  # normalization
 	mutate(crude_rate = (n_deaths/n_population) * 100000) %>% 
   spread(key = race, value = crude_rate) %>%
   janitor::clean_names() %>% 
+  # barplot
   plot_ly(x = ~ten_year_age_groups,
   				y = ~white,
   				name = "White",
   				type = "bar") %>% 
+  	# stack race one by one
   	add_trace(y = ~black_or_african_american,
   						name = "Black or African American") %>%
   	add_trace(y = ~asian_or_pacific_islander,
   						name = "Asian or Pacific Islander") %>% 
   	add_trace(y = ~american_indian_or_alaska_native,
   						name = "American Indian or Alaska Native") %>% 
- 
+  	# add description
   	layout(barmode = "stack",
   				 xaxis = list(title = "Age Groups"),
   				 yaxis = list(title = "Crude Firearm Death Rate")

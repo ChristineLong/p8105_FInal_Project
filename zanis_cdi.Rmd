@@ -11,8 +11,16 @@ library(tidyverse)
 
 ```
 
-```{r}
+**Dataset Description:**
 
+US Chronic Disease Indicators (CDI) dataset provides 124 chronic disease indicators provided by consensus. The source of the dataset is hosted on [data.gov](https://catalog.data.gov/dataset/u-s-chronic-disease-indicators-cdi). Major indicators from major categories were selected and joined with other variables for model building or visualization purposes. 
+
+**Data cleaning:**
+One major question from each chronic diseases were selected. Most indicators are from adults older than 18 years except for poverty (all age) and disability (older than 65 years.). The types of data values we use are the crude prevalence or mean, and we use overall data instead of stratified data. Data from year 2010 were removed because of huge amount of missing data.
+
+
+```{r data_cleaning}
+# list of questions
 list_quest <- c(
 "Poverty",
 "Current smoking among adults aged >= 18 years",
@@ -25,31 +33,41 @@ list_quest <- c(
 "Heavy drinking among adults aged >= 18 years",
 "Disability among adults aged >= 65 years")
 
-download.file("https://chronicdata.cdc.gov/views/g4ie-h725/rows.csv?accessType=DOWNLOAD",
-							"./data/U.S._Chronic_Disease_Indicators__CDI_.csv")
-
-
+# download the file if not downloaded yet
+if (!file.exists("./data/U.S._Chronic_Disease_Indicators__CDI_.csv")) {
+	download.file("https://chronicdata.cdc.gov/views/g4ie-h725/rows.csv?accessType=DOWNLOAD", "./data/U.S._Chronic_Disease_Indicators__CDI_.csv")
+}
+	
+#
 cdi_raw <- read_csv("./data/U.S._Chronic_Disease_Indicators__CDI_.csv")
 cdi <- cdi_raw %>%
-	# filter(Topic == "Mental Health", DataValueType == "Age-adjusted Mean") %>%
+	# get geo locations and separate into latitude and longititude
 	separate(GeoLocation, into = c("latitude", "longititude"), sep = ",") %>%
 	mutate(latitude = str_replace(string = latitude, pattern = "\\(", replacement = ""),
 				 longititude = str_replace(string = longititude, pattern = "\\)", replacement = ""),
 				 latitude = as.numeric(latitude),
 				 longititude = as.numeric(longititude)
 	) %>% 
+	# select the aimed questions
 	filter(Question %in% list_quest) %>%
+	# filtered out year 2010
 	filter(LocationAbbr != "US",
 				 YearStart != 2010,
 				 Stratification1 == "Overall",
 				 DataValueType %in% c("Crude Prevalence", "Mean")) %>%
+	# get rid of unnecessary variables
 	select(YearStart:DataValue, -DataSource, -Response, -DatavalueFootnote, -DataValueFootnoteSymbol, -YearEnd, -LocationDesc) %>%
 	select(-Topic, -DataValueUnit, -DataValueType) %>% 
+	# each column a question
 	spread(key = Question, value = DataValue)
 
+# label the column names
 colnames(cdi) <- c("year", "state", "smoking", "disability_65", "self_rated_health", "drinking", "leisure_phys_act", "overweight", "poverty", "diabetes", "sleep", "mental_health")
 
-# write_csv(cdi, "./data/sel_cdi.csv")
+# write the file for merging
+if (!file.exists("./data/sel_cdi.csv")) {
+	write_csv(cdi, "./data/sel_cdi.csv")
+}
 
 ```
 

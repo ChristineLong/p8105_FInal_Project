@@ -7,14 +7,15 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(usmap)
+library(tidyverse)
 ```
 
 ### Exploratory analysis, not for formal dataset
 
 ```{r}
 
-library(tidyverse)
-gun_violence <- read_csv("./zanis_dataset/gun-violence-data_01-2013_03-2018.csv")
+gun_violence <- read_csv("./data/gun-violence-data_01-2013_03-2018.csv")
 
 state_abb <- state.abb
 names(state_abb) <- state.name
@@ -25,8 +26,11 @@ gun_violence_tidy <- gun_violence %>%
 	mutate(state = state_abb[state],
 				 state = ifelse(is.na(state), "DC", state)) %>% 
 	select(-date)
-	
-# write_csv(x = gun_violence_tidy, path = "./shiny_dataset/gun_violence_tidy.csv")
+
+
+if (!file.exists("./data/gun_violence_tidy.csv")) {
+	write_csv(x = gun_violence_tidy, path = "./data/gun_violence_tidy.csv")
+}
 
 ```
 
@@ -37,20 +41,20 @@ library(tidyverse)
 # fixed width dataframe
 
 merged_firearm_mortality <-
-	read_csv("./zanis_dataset/merged_firearm_mortality.csv") %>%
+	read_csv("./data/merged_firearm_mortality.csv") %>%
 	select(state_abb, year, crude_rate, deaths, population, law_strength) %>%
 	rename(state = state_abb) %>% 
 	unite(col = state_year, state, year, sep = "_")
 
-gun_violence <- read_csv("./zanis_dataset/gun_violence_tidy.csv") %>% 
+gun_violence <- read_csv("./data/gun_violence_tidy.csv") %>% 
 	sample_n(size = 25000)
 
-gun_violence_merged <- read_csv("./zanis_dataset/gun_violence_tidy.csv") %>%
+gun_violence_merged <- read_csv("./data/gun_violence_tidy.csv") %>%
 	group_by(state, year) %>%
 	summarize(total_killed = n(), total_injured = n()) %>% 
 	unite(col = state_year, state, year, sep = "_")
 
-unempl <- read_csv("./zanis_dataset/unempl.csv") %>% 
+unempl <- read_csv("./data/unempl.csv") %>% 
 	unite(col = state_year, state, year, sep = "_")
 
 merged_data <- full_join(x = gun_violence_merged, y = unempl, by = "state_year")
@@ -136,4 +140,132 @@ renderPlotly({
 })
 
 ```
+
+# ssamatab1 dataset
+
+```{r}
+
+# download the file if not exist
+if (!file.exists("./data/ssamatab1.txt")) {
+	download.file("https://www.bls.gov/web/metro/ssamatab1.txt",
+								destfile = "./data/ssamatab1.txt")
+}
+	
+# get file name
+ssamatab1_file <- "./data/ssamatab1.txt"
+
+# get colname rows
+ssamatab1_colname <- read_lines(ssamatab1_file, skip = 3, n_max = 1)
+# parse column name, words linked by single space, if not, words without space
+ssamatab1_colname <-
+	str_extract_all(ssamatab1_colname, "([\\S]+[\\s][\\S]+)|[\\S]+") %>%
+	unlist()
+
+
+# fixed width dataframe
+ssamatab1 <- read_delim("./data/ssamatab1.txt",
+												delim = "[ ]",
+												col_names = "raw",
+												skip = 5) %>%
+	# filtered out footnote
+	filter(str_detect(raw, "MT[0-9]+[\\s]")) %>%
+	# separate into columns
+	separate(raw, into = ssamatab1_colname, sep = "[\\s]{2,}") %>% 
+	# clean column names
+	janitor::clean_names() %>%
+	rename(fips = code_2) %>% 
+	separate(area, into = c("county", "state_source"), sep = ",") %>%
+	separate(county,
+					 into = paste("county", 1:4, sep = "_"),
+					 sep = "-+") %>%
+	separate(state_source,
+					 into = c("unknown", "state", "source1", "source2"),
+					 sep = " ") %>% 
+	select(-c("unknown", "source1", "source2")) %>% 
+	mutate(rate = as.numeric(rate),
+				 fips = as.numeric(fips),
+				 year = as.numeric(year)) %>% 
+	mutate(employment = as.numeric(str_remove(employment, ","))) %>% 
+	mutate(unemployment = as.numeric(str_remove(unemployment, ","))) %>%
+	group_by(state, year) %>%
+	summarize(unemployment_rate = sum(unemployment) / sum(unemployment * 100 / rate),
+						total_unemployment = sum(unemployment)) %>%
+	filter(str_length(state) != 2) %>% View
+	gather(key = "type_variable", value = "value", unemployment_rate:total_unemployment)
+
+# write_csv(path = "./data/tidy_ssamatab1.csv", x = ssamatab1)
+
+
+
+
+	
+usmap::plot_usmap(data = data.frame(
+	ssamatab1 %>%
+		filter(year == "2016", month == "01") %>% 
+		select(state, rate)),
+	values = "rate") +
+	scale_fill_continuous(low = "white", high = "red")
+
+
+# take a look at unemployment rate of New York-Newark_Jersey area
+ssamatab1 %>%
+	filter(state == "NY") %>%
+	group_by(fips, year) %>%
+	summarize(mean_rate = mean(rate)) %>%
+  ggplot(aes(y = mean_rate, x = year, group = fips, color = fips)) +
+	  geom_point(show.legend = FALSE) +
+	  geom_line(show.legend = FALSE) +
+	  labs(
+	    title = "Mean unemployment rate for each area",
+	    x = "Year",
+	    y = "Mean Unemployment rate",
+	    color = "Area"
+	  ) +
+	  theme(
+	  	axis.text.x = element_text(angle = 60)
+	  )
+
+```
+
+
+### Try plotly
+
+```{r}
+library(plotly)
+	
+geo1 <- list(
+	scope = "usa",
+	projection = list(type = "state"),
+	showlakes = TRUE,
+	lakecolor = toRGB("white")
+)
+
+g2 <- list(
+	scope = "usa",
+	projection = list(type = "state"),
+	showlakes = TRUE,
+	lakecolor = toRGB("white")
+)
+
+plot_geo(ssamatab1, locationmode = "USA-states") %>% 
+	add_trace(
+		z = ~state_unemployment,
+		locations = ~state,
+		color = ~state_unemployment,
+		colors = "Reds") %>%
+	add_markers(
+		y = 12,
+		x = 12,
+		locations = ~state,
+		size = ~unemployment,
+		colors = "Blues",
+		geo = "geo2"
+	) %>%
+	layout(
+		geo = geo1, geo2 = g2
+	)
+
+```
+```
+
 
